@@ -22,6 +22,10 @@ import com.dtstack.flink.sql.side.FieldInfo;
 import com.dtstack.flink.sql.side.JoinInfo;
 import com.dtstack.flink.sql.side.SideInfo;
 import com.dtstack.flink.sql.side.SideTableInfo;
+<<<<<<< HEAD
+=======
+import com.dtstack.flink.sql.side.redis.table.RedisSideTableInfo;
+>>>>>>> 97ce7a2d8187209946c49aa76c4e93527f066540
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;

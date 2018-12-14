@@ -36,6 +36,13 @@ public abstract class TableInfo implements Serializable {
 
     public static final String PARALLELISM_KEY = "parallelism";
 
+    public static final String SOURCE_DATA_TYPE = "sourcedatatype";
+
+    public static final String SINK_DATA_TYPE = "sinkdatatype";
+
+    public static final String FIELD_DELINITER = "fielddelimiter";
+
+    public static final String LENGTH_CHECK_POLICY = "lengthcheckpolicy";
     private String name;
 
     private String type;
@@ -52,9 +59,17 @@ public abstract class TableInfo implements Serializable {
 
     private final List<Class> fieldClassList = Lists.newArrayList();
 
-    private List<String> primaryKeys;
+    private List<String> primaryKeys ;
 
-    private Integer parallelism = 1;
+    private Integer parallelism;
+
+    private String sourceDataType = "json";
+
+    private String sinkDataType = "json";
+
+    private String fieldDelimiter;
+
+    private String lengthCheckPolicy = "SKIP";
 
     public String[] getFieldTypes() {
         return fieldTypes;
@@ -108,6 +123,34 @@ public abstract class TableInfo implements Serializable {
         }
 
         this.parallelism = parallelism;
+    }
+
+    public String getSourceDataType() {
+        return sourceDataType;
+    }
+
+    public void setSourceDataType(String sourceDataType) {
+        this.sourceDataType = sourceDataType;
+    }
+
+    public String getSinkDataType() { return sinkDataType; }
+
+    public void setSinkDataType(String sinkDataType) { this.sinkDataType = sinkDataType; }
+
+    public String getFieldDelimiter() {
+        return fieldDelimiter;
+    }
+
+    public void setFieldDelimiter(String fieldDelimiter) {
+        this.fieldDelimiter = fieldDelimiter;
+    }
+
+    public String getLengthCheckPolicy() {
+        return lengthCheckPolicy;
+    }
+
+    public void setLengthCheckPolicy(String lengthCheckPolicy) {
+        this.lengthCheckPolicy = lengthCheckPolicy;
     }
 
     public void addField(String fieldName){

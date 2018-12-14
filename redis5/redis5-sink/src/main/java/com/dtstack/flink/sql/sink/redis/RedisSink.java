@@ -62,6 +62,7 @@ public class RedisSink implements RetractStreamTableSink<Row>, IStreamSinkGener<
 
     protected String masterName;
 
+
     public RedisSink(){
 
     }
@@ -73,6 +74,7 @@ public class RedisSink implements RetractStreamTableSink<Row>, IStreamSinkGener<
         this.database = redisTableInfo.getDatabase();
         this.password = redisTableInfo.getPassword();
         this.tableName = redisTableInfo.getTablename();
+
         this.primaryKeys = redisTableInfo.getPrimaryKeys();
         this.redisType = redisTableInfo.getRedisType();
         this.maxTotal = redisTableInfo.getMaxTotal();
@@ -80,6 +82,7 @@ public class RedisSink implements RetractStreamTableSink<Row>, IStreamSinkGener<
         this.minIdle = redisTableInfo.getMinIdle();
         this.masterName = redisTableInfo.getMasterName();
         this.timeout = redisTableInfo.getTimeout();
+
         return this;
     }
 
@@ -104,6 +107,7 @@ public class RedisSink implements RetractStreamTableSink<Row>, IStreamSinkGener<
                 .setMaxIdle(this.maxIdle)
                 .setMinIdle(this.minIdle)
                 .setMasterName(this.masterName);
+
         RedisOutputFormat redisOutputFormat = builder.finish();
         RichSinkFunction richSinkFunction = new OutputFormatSinkFunction(redisOutputFormat);
         dataStream.addSink(richSinkFunction);

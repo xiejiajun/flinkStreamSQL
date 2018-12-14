@@ -41,14 +41,22 @@ public class KafkaSourceParser extends AbsSourceParser {
         KafkaSourceTableInfo kafka11SourceTableInfo = new KafkaSourceTableInfo();
         kafka11SourceTableInfo.setName(tableName);
         parseFieldsInfo(fieldsInfo, kafka11SourceTableInfo);
-
         kafka11SourceTableInfo.setParallelism(MathUtil.getIntegerVal(props.get(KafkaSourceTableInfo.PARALLELISM_KEY.toLowerCase())));
-        kafka11SourceTableInfo.setBootstrapServers(MathUtil.getString(props.get(KafkaSourceTableInfo.BOOTSTRAPSERVERS_KEY.toLowerCase())));
-        kafka11SourceTableInfo.setGroupId(MathUtil.getString(props.get(KafkaSourceTableInfo.GROUPID_KEY.toLowerCase())));
-        kafka11SourceTableInfo.setTopic(MathUtil.getString(props.get(KafkaSourceTableInfo.TOPIC_KEY.toLowerCase())));
-        kafka11SourceTableInfo.setOffsetReset(MathUtil.getString(props.get(KafkaSourceTableInfo.OFFSETRESET_KEY.toLowerCase())));
-        kafka11SourceTableInfo.setTopicIsPattern(MathUtil.getBoolean(props.get(KafkaSourceTableInfo.TOPICISPATTERN_KEY.toLowerCase())));
-        kafka11SourceTableInfo.check();
+
+        if (props.get(KafkaSourceTableInfo.SOURCE_DATA_TYPE) != null) {
+            kafka11SourceTableInfo.setSourceDataType(props.get(KafkaSourceTableInfo.SOURCE_DATA_TYPE).toString());
+        }
+        if (props.get(KafkaSourceTableInfo.FIELD_DELINITER) != null) {
+            kafka11SourceTableInfo.setFieldDelimiter(props.get(KafkaSourceTableInfo.FIELD_DELINITER).toString());
+        }
+        if (props.get(KafkaSourceTableInfo.LENGTH_CHECK_POLICY) != null) {
+            kafka11SourceTableInfo.setLengthCheckPolicy(props.get(KafkaSourceTableInfo.LENGTH_CHECK_POLICY).toString());
+        }
+        for (String key:props.keySet()) {
+            if (!key.isEmpty() && key.startsWith("kafka.")) {
+                kafka11SourceTableInfo.addKafkaParam(key.substring(6), props.get(key).toString());
+            }
+        }
         return kafka11SourceTableInfo;
     }
 }

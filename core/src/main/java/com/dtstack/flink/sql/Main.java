@@ -59,7 +59,9 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.sinks.TableSink;
-import org.apache.flink.types.Row;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,9 +69,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.net.URLDecoder;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -77,6 +77,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Date: 2018/6/26
@@ -98,6 +101,12 @@ public class Main {
 
     private static final int delayInterval = 10; //sec
 
+    private static String TMP_FILE_PATH = "/tmp/.flink/";
+
+    private static String FS_DEFAULT_PREFIX = "hdfs://hdpfd3-58-cluster";
+
+    public static final List<URL> urlList = new ArrayList<>();
+
     public static void main(String[] args) throws Exception {
 
         Options options = new Options();
@@ -108,7 +117,7 @@ public class Main {
         options.addOption("remoteSqlPluginPath", true, "remote sql plugin path");
         options.addOption("confProp", true, "env properties");
         options.addOption("mode", true, "deploy mode");
-
+        options.addOption("yarnconf", true, "yarn conf");
         options.addOption("savePointPath", true, "Savepoint restore path");
         options.addOption("allowNonRestoredState", true, "Flag indicating whether non restored state is allowed if the savepoint");
 
@@ -121,6 +130,7 @@ public class Main {
         String remoteSqlPluginPath = cl.getOptionValue("remoteSqlPluginPath");
         String deployMode = cl.getOptionValue("mode");
         String confProp = cl.getOptionValue("confProp");
+        String yarnConfDir = cl.getOptionValue("yarnconf");
 
         Preconditions.checkNotNull(sql, "parameters of sql is required");
         Preconditions.checkNotNull(name, "parameters of name is required");
@@ -129,22 +139,26 @@ public class Main {
         sql = URLDecoder.decode(sql, Charsets.UTF_8.name());
         SqlParser.setLocalSqlPluginRoot(localSqlPluginPath);
 
-        List<String> addJarFileList = Lists.newArrayList();
+        List<String> addJarFileList;
+        List<String> addJarFileLocalList = Lists.newArrayList();
         if(!Strings.isNullOrEmpty(addJarListStr)){
             addJarListStr = URLDecoder.decode(addJarListStr, Charsets.UTF_8.name());
             addJarFileList = objMapper.readValue(addJarListStr, List.class);
+
+            for (String jar:addJarFileList) {
+                if (jar.startsWith("hdfs") || jar.startsWith("viewfs")){
+                    addJarFileLocalList.add(copyToLocalFile(jar,yarnConfDir));
+                } else {
+                    addJarFileLocalList.add(jar);
+                }
+            }
         }
 
         ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();
         DtClassLoader dtClassLoader = new DtClassLoader(new URL[]{}, threadClassLoader);
         Thread.currentThread().setContextClassLoader(dtClassLoader);
 
-        URLClassLoader parentClassloader;
-        if(!ClusterMode.local.name().equals(deployMode)){
-            parentClassloader = (URLClassLoader) threadClassLoader.getParent();
-        }else{
-            parentClassloader = dtClassLoader;
-        }
+        URLClassLoader parentClassloader= dtClassLoader;
 
         confProp = URLDecoder.decode(confProp, Charsets.UTF_8.toString());
         Properties confProperties = PluginUtil.jsonStrToObject(confProp, Properties.class);
@@ -155,18 +169,19 @@ public class Main {
         SqlTree sqlTree = SqlParser.parseSql(sql);
 
         //Get External jar to load
-        for(String addJarPath : addJarFileList){
+        for(String addJarPath : addJarFileLocalList){
             File tmpFile = new File(addJarPath);
             jarURList.add(tmpFile.toURI().toURL());
         }
-
+        urlList.addAll(jarURList);
         Map<String, SideTableInfo> sideTableMap = Maps.newHashMap();
         Map<String, Table> registerTableCache = Maps.newHashMap();
 
         //register udf
         registerUDF(sqlTree, jarURList, parentClassloader, tableEnv);
         //register table schema
-        registerTable(sqlTree, env, tableEnv, localSqlPluginPath, remoteSqlPluginPath, sideTableMap, registerTableCache);
+        //registerTable(sqlTree, env, tableEnv, localSqlPluginPath, remoteSqlPluginPath, sideTableMap, registerTableCache);
+        registerTable(sqlTree, env, tableEnv, localSqlPluginPath, localSqlPluginPath, sideTableMap, registerTableCache);
 
         SideSqlExec sideSqlExec = new SideSqlExec();
         sideSqlExec.setLocalSqlPluginPath(localSqlPluginPath);
@@ -185,6 +200,7 @@ public class Main {
             for (String tableName : result.getTargetTableList()) {
                 if (sqlTree.getTmpTableMap().containsKey(tableName)) {
                     CreateTmpTableParser.SqlParserResult tmp = sqlTree.getTmpTableMap().get(tableName);
+
                     String realSql = DtStringUtil.replaceIgnoreQuota(result.getExecSql(), "`", "");
 
                     org.apache.calcite.sql.parser.SqlParser.Config config = org.apache.calcite.sql.parser.SqlParser
@@ -192,6 +208,7 @@ public class Main {
                             .setLex(Lex.MYSQL)
                             .build();
                     SqlNode sqlNode = org.apache.calcite.sql.parser.SqlParser.create(realSql,config).parseStmt();
+
                     String tmpSql = ((SqlInsert) sqlNode).getSource().toString();
                     tmp.setExecSql(tmpSql);
                     sideSqlExec.registerTmpTable(tmp, sideTableMap, tableEnv, registerTableCache);
@@ -222,6 +239,31 @@ public class Main {
         env.execute(name);
     }
 
+    private static String copyToLocalFile(String jar,String yarnConfDir) throws IOException, URISyntaxException {
+        FileSystem fs = FileSystem.get(new URI(FS_DEFAULT_PREFIX),loadYarnConfiguration(yarnConfDir));
+        Path sourcePath = new Path(jar);
+        Path destPath = new Path(TMP_FILE_PATH,sourcePath.getName());
+        fs.copyToLocalFile(sourcePath,destPath);
+        return destPath.toString();
+    }
+
+    private static YarnConfiguration loadYarnConfiguration(String yarnConfDir)
+    {
+        org.apache.hadoop.conf.Configuration hadoopConf = new org.apache.hadoop.conf.Configuration();
+        hadoopConf.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
+
+        Stream.of("yarn-site.xml", "core-site.xml", "hdfs-site.xml").forEach(file -> {
+            File site = new File(requireNonNull(yarnConfDir, "ENV HADOOP_CONF_DIR is not setting"), file);
+            if (site.exists() && site.isFile()) {
+                hadoopConf.addResource(new org.apache.hadoop.fs.Path(site.toURI()));
+            }
+            else {
+                throw new RuntimeException(site + " not exists");
+            }
+        });
+
+        return new YarnConfiguration(hadoopConf);
+    }
     /**
      * This part is just to add classpath for the jar when reading remote execution, and will not submit jar from a local
      * @param env
@@ -314,6 +356,7 @@ public class Main {
             env.registerCachedFile(url.getPath(),  classFileName, true);
             i++;
         }
+        urlList.addAll(classPathSet);
     }
 
     private static StreamExecutionEnvironment getStreamExeEnv(Properties confProperties, String deployMode) throws IOException {

@@ -66,6 +66,7 @@ public class RedisAllReqRow extends AllReqRow{
     @Override
     public Row fillData(Row input, Object sideInput) {
         return redisSideReqRow.fillData(input, sideInput);
+
     }
 
     @Override
@@ -195,6 +196,7 @@ public class RedisAllReqRow extends AllReqRow{
                     }
                     tmpCache.put(key, kv);
                 }
+
             }
 
 
@@ -207,6 +209,7 @@ public class RedisAllReqRow extends AllReqRow{
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+
             }
             if (jedisSentinelPool != null) {
                 jedisSentinelPool.close();
@@ -290,5 +293,6 @@ public class RedisAllReqRow extends AllReqRow{
             config.setMinIdle(Integer.parseInt(minIdle));
         }
         return config;
+
     }
 }

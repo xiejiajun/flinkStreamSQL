@@ -45,6 +45,7 @@ public class RedisTableInfo extends TargetTableInfo {
 
     public static final String MASTER_NAME = "masterName";
 
+
     public RedisTableInfo(){
         setType(CURR_TYPE);
     }
@@ -69,6 +70,7 @@ public class RedisTableInfo extends TargetTableInfo {
 
     private String masterName;
 
+
     public String getUrl() {
         return url;
     }
@@ -85,6 +87,7 @@ public class RedisTableInfo extends TargetTableInfo {
         this.database = database;
     }
 
+
     public String getTablename() {
         return tableName;
     }
@@ -92,6 +95,7 @@ public class RedisTableInfo extends TargetTableInfo {
     public void setTablename(String tablename) {
         this.tableName = tablename;
     }
+
 
     public String getPassword() {
         return password;
@@ -149,14 +153,17 @@ public class RedisTableInfo extends TargetTableInfo {
         this.masterName = masterName;
     }
 
+
     @Override
     public boolean check() {
         Preconditions.checkNotNull(url, "redis field of URL is required");
         Preconditions.checkNotNull(database, "redis field of database is required");
         Preconditions.checkNotNull(password, "redis field of password is required");
+
         if (redisType == 2){
             Preconditions.checkNotNull(masterName, "redis field of MasterName is required");
         }
+
         return true;
     }
 
@@ -164,4 +171,5 @@ public class RedisTableInfo extends TargetTableInfo {
     public String getType() {
         return super.getType().toLowerCase();
     }
+
 }

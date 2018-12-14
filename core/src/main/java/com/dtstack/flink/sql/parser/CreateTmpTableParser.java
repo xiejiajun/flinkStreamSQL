@@ -86,6 +86,7 @@ public class CreateTmpTableParser implements IParser {
             sqlParseResult.setTableName(tableName);
             String transformSelectSql = DtStringUtil.replaceIgnoreQuota(sqlNode.toString(), "`", "");
             sqlParseResult.setExecSql(transformSelectSql);
+
             sqlTree.addTmpSql(sqlParseResult);
             sqlTree.addTmplTableInfo(tableName, sqlParseResult);
         } else {

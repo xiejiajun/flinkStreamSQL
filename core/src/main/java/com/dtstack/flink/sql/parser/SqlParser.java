@@ -112,7 +112,8 @@ public class SqlParser {
                         throw new RuntimeException("can't find table " + tableName);
                     }
 
-                    TableInfo tableInfo = tableInfoParser.parseWithTableType(ETableType.SOURCE.getType(),
+
+                    TableInfo tableInfo = TableInfoParserFactory.parseWithTableType(ETableType.SOURCE.getType(),
                             createTableResult, LOCAL_SQL_PLUGIN_ROOT);
                     sqlTree.addTableInfo(tableName, tableInfo);
                 }
@@ -125,7 +126,8 @@ public class SqlParser {
                         throw new RuntimeException("can't find table " + tableName);
                     }
 
-                    TableInfo tableInfo = tableInfoParser.parseWithTableType(ETableType.SINK.getType(),
+
+                    TableInfo tableInfo = TableInfoParserFactory.parseWithTableType(ETableType.SINK.getType(),
                             createTableResult, LOCAL_SQL_PLUGIN_ROOT);
                     sqlTree.addTableInfo(tableName, tableInfo);
                 }
@@ -140,8 +142,7 @@ public class SqlParser {
                     if(createTableResult == null){
                         throw new RuntimeException("can't find table " + tableName);
                     }
-
-                    TableInfo tableInfo = tableInfoParser.parseWithTableType(ETableType.SOURCE.getType(),
+                    TableInfo tableInfo = TableInfoParserFactory.parseWithTableType(ETableType.SOURCE.getType(),
                             createTableResult, LOCAL_SQL_PLUGIN_ROOT);
                     sqlTree.addTableInfo(tableName, tableInfo);
                 }

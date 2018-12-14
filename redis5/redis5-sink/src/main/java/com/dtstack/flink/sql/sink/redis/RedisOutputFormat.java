@@ -18,8 +18,10 @@
 
 package com.dtstack.flink.sql.sink.redis;
 
+
 import com.dtstack.flink.sql.sink.MetricOutputFormat;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.util.*;
 
 public class RedisOutputFormat extends MetricOutputFormat {
+
 
     private String url;
 
@@ -49,6 +52,7 @@ public class RedisOutputFormat extends MetricOutputFormat {
 
     private String masterName;
 
+
     protected String[] fieldNames;
 
     protected TypeInformation<?>[] fieldTypes;
@@ -60,6 +64,7 @@ public class RedisOutputFormat extends MetricOutputFormat {
     private JedisPool pool;
 
     private JedisCommands jedis;
+
 
     private JedisSentinelPool jedisSentinelPool;
 
@@ -127,6 +132,7 @@ public class RedisOutputFormat extends MetricOutputFormat {
             //集群
             case 3:
                 jedis = new JedisCluster(addresses, timeout, timeout,10, password, poolConfig);
+
         }
     }
 
@@ -138,7 +144,9 @@ public class RedisOutputFormat extends MetricOutputFormat {
             return;
         }
         Row row = tupleTrans.getField(1);
+
         if (row.getArity() != fieldNames.length) {
+
             return;
         }
 
@@ -169,6 +177,7 @@ public class RedisOutputFormat extends MetricOutputFormat {
             jedis.set(key.toString(), (String) row.getField(i));
         }
         outRecords.inc();
+
     }
 
     @Override
@@ -184,6 +193,7 @@ public class RedisOutputFormat extends MetricOutputFormat {
                 ((Closeable) jedis).close();
             }
         }
+
 
     }
 
@@ -263,10 +273,12 @@ public class RedisOutputFormat extends MetricOutputFormat {
             return this;
         }
 
+
         public RedisOutputFormat finish(){
             if (redisOutputFormat.url == null){
                 throw new IllegalArgumentException("No URL supplied.");
             }
+
 
             if (redisOutputFormat.tableName == null){
                 throw new IllegalArgumentException("No tablename supplied.");

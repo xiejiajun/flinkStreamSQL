@@ -391,6 +391,7 @@ public class SideSqlExec {
                 || selectNode.getKind() == BETWEEN
                 || selectNode.getKind() == IS_NULL
                 || selectNode.getKind() == IS_NOT_NULL
+                || selectNode.getKind() == ROW_NUMBER
                 ){
             SqlBasicCall sqlBasicCall = (SqlBasicCall) selectNode;
             for(int i=0; i<sqlBasicCall.getOperands().length; i++){
@@ -499,11 +500,13 @@ public class SideSqlExec {
                                  Map<String, Table> tableCache)
             throws Exception {
 
-        if(localSqlPluginPath == null){
+        if (localSqlPluginPath == null) {
             throw new RuntimeException("need to set localSqlPluginPath");
         }
 
-        localTableCache.putAll(tableCache);
+
+        Map<String, Table> localTableCache = Maps.newHashMap(tableCache);
+
         Queue<Object> exeQueue = sideSQLParser.getExeQueue(result.getExecSql(), sideTableMap.keySet());
         Object pollObj = null;
 
@@ -511,45 +514,43 @@ public class SideSqlExec {
         boolean preIsSideJoin = false;
         List<FieldReplaceInfo> replaceInfoList = Lists.newArrayList();
 
-        while((pollObj = exeQueue.poll()) != null){
+        while ((pollObj = exeQueue.poll()) != null) {
 
-            if(pollObj instanceof SqlNode){
+            if (pollObj instanceof SqlNode) {
                 SqlNode pollSqlNode = (SqlNode) pollObj;
 
-                if(preIsSideJoin){
+                if (preIsSideJoin) {
                     preIsSideJoin = false;
-                    for(FieldReplaceInfo replaceInfo : replaceInfoList){
+                    for (FieldReplaceInfo replaceInfo : replaceInfoList) {
                         replaceFieldName(pollSqlNode, replaceInfo.getMappingTable(), replaceInfo.getTargetTableName(), replaceInfo.getTargetTableAlias());
                     }
                 }
 
-                if(pollSqlNode.getKind() == INSERT){
+                if (pollSqlNode.getKind() == INSERT) {
                     tableEnv.sqlUpdate(pollSqlNode.toString());
-                }else if(pollSqlNode.getKind() == AS){
+                } else if (pollSqlNode.getKind() == AS) {
                     AliasInfo aliasInfo = parseASNode(pollSqlNode);
                     Table table = tableEnv.sql(aliasInfo.getName());
                     tableEnv.registerTable(aliasInfo.getAlias(), table);
                     localTableCache.put(aliasInfo.getAlias(), table);
-                } else if (pollSqlNode.getKind() == SELECT){
+                } else if (pollSqlNode.getKind() == SELECT) {
                     Table table = tableEnv.sqlQuery(pollObj.toString());
-                    if (result.getFieldsInfoStr() == null){
+                    if (result.getFieldsInfoStr() == null) {
                         tableEnv.registerTable(result.getTableName(), table);
                     } else {
-                        if (checkFieldsInfo(result, table)){
+                        if (checkFieldsInfo(result, table)) {
                             table = table.as(tmpFields);
                             tableEnv.registerTable(result.getTableName(), table);
                         } else {
                             throw new RuntimeException("Fields mismatch");
                         }
                     }
-                    localTableCache.put(result.getTableName(), table);
-
                 }
 
-            }else if (pollObj instanceof JoinInfo){
+            } else if (pollObj instanceof JoinInfo) {
                 preIsSideJoin = true;
-                joinFun(pollObj, localTableCache, sideTableMap, tableEnv, replaceInfoList);
             }
+
         }
     }
     private void joinFun(Object pollObj, Map<String, Table> localTableCache,

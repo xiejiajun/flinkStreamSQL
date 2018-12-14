@@ -123,7 +123,9 @@ public class CustomerJsonDeserialization extends AbsDeserialization<Row> {
             return row;
         } catch (Throwable t) {
             //add metric of dirty data
+            LOG.error(t.getMessage());
             dirtyDataCounter.inc();
+
             return null;
         }
     }

@@ -124,8 +124,9 @@ public class CustomerJsonDeserialization extends AbsDeserialization<Row> {
             numInResolveRecord.inc();
             return row;
         } catch (Throwable t) {
-            //add metric of dirty data
+            LOG.error(t.getMessage());
             dirtyDataCounter.inc();
+            //return new Row(fieldNames.length);
             return null;
         }
     }

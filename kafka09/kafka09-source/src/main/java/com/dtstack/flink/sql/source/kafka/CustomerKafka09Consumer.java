@@ -27,6 +27,7 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer09;
 import org.apache.flink.streaming.connectors.kafka.config.OffsetCommitMode;
 import org.apache.flink.streaming.connectors.kafka.internals.AbstractFetcher;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
+import org.apache.flink.streaming.util.serialization.KeyedDeserializationSchema;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.SerializedValue;
 
@@ -55,6 +56,21 @@ public class CustomerKafka09Consumer extends FlinkKafkaConsumer09<Row> {
     public CustomerKafka09Consumer(Pattern subscriptionPattern, AbsDeserialization<Row> valueDeserializer, Properties props) {
         super(subscriptionPattern, valueDeserializer, props);
         this.customerJsonDeserialization = (CustomerJsonDeserialization) valueDeserializer;
+    }
+
+    /**
+     * CommonDeserialization
+     *
+     * @param topic
+     * @param KeyedDeserializationSchema
+     * @param props
+     */
+    public CustomerKafka09Consumer(String topic, KeyedDeserializationSchema KeyedDeserializationSchema, Properties props){
+        super(Arrays.asList(topic.split(",")),KeyedDeserializationSchema,props);
+    }
+
+    public CustomerKafka09Consumer(Pattern subscriptionPattern, KeyedDeserializationSchema KeyedDeserializationSchema, Properties props){
+        super(subscriptionPattern,KeyedDeserializationSchema,props);
     }
 
     @Override

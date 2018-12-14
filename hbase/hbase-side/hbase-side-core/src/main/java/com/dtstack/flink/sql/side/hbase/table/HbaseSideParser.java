@@ -53,6 +53,10 @@ public class HbaseSideParser extends AbsSideTableParser {
     public static final String PRE_ROW_KEY = "preRowKey";
 
     public static final String CACHE = "cache";
+<<<<<<< HEAD
+=======
+
+>>>>>>> 97ce7a2d8187209946c49aa76c4e93527f066540
 
 
     static {

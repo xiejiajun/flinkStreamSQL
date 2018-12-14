@@ -21,18 +21,20 @@ package com.dtstack.flink.sql.side.redis.table;
 import com.dtstack.flink.sql.table.AbsSideTableParser;
 import com.dtstack.flink.sql.table.TableInfo;
 import com.dtstack.flink.sql.util.MathUtil;
-
 import java.util.Map;
+
 
 public class RedisSideParser extends AbsSideTableParser {
 
     @Override
     public TableInfo getTableInfo(String tableName, String fieldsInfo, Map<String, Object> props) {
 
+
         RedisSideTableInfo redisSideTableInfo = new RedisSideTableInfo();
         redisSideTableInfo.setName(tableName);
         parseFieldsInfo(fieldsInfo, redisSideTableInfo);
         parseCacheProp(redisSideTableInfo, props);
+
         redisSideTableInfo.setUrl(MathUtil.getString(props.get(RedisSideTableInfo.URL_KEY.toLowerCase())));
         redisSideTableInfo.setPassword(MathUtil.getString(props.get(RedisSideTableInfo.PASSWORD_KEY.toLowerCase())));
         redisSideTableInfo.setDatabase(MathUtil.getString(props.get(RedisSideTableInfo.DATABASE_KEY.toLowerCase())));
@@ -50,4 +52,5 @@ public class RedisSideParser extends AbsSideTableParser {
 
         return redisSideTableInfo;
     }
+
 }

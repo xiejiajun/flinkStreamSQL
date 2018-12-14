@@ -67,6 +67,9 @@ public class LauncherOptionParser {
 
     public static final String OPTION_FLINK_JAR_PATH = "flinkJarPath";
 
+    public static final String HADOOP_USER_NAME = "hadoop_user_name";
+
+
     private Options options = new Options();
 
     private BasicParser parser = new BasicParser();
@@ -83,7 +86,7 @@ public class LauncherOptionParser {
         options.addOption(OPTION_ADDJAR, true, "sql ext jar,eg udf jar");
         options.addOption(OPTION_CONF_PROP, true, "sql ref prop,eg specify event time");
         options.addOption(OPTION_YARN_CONF_DIR, true, "Yarn and hadoop configuration directory");
-
+        options.addOption(HADOOP_USER_NAME, true, "hadoop user");
         options.addOption(OPTION_SAVE_POINT_PATH, true, "Savepoint restore path");
         options.addOption(OPTION_ALLOW_NON_RESTORED_STATE, true, "Flag indicating whether non restored state is allowed if the savepoint");
         options.addOption(OPTION_FLINK_JAR_PATH, true, "flink jar path for submit of perjob mode");
@@ -109,8 +112,9 @@ public class LauncherOptionParser {
             properties.setLocalSqlPluginPath(localPlugin);
 
             String remotePlugin = cl.getOptionValue(OPTION_REMOTE_SQL_PLUGIN_PATH);
-            Preconditions.checkNotNull(remotePlugin);
+            //Preconditions.checkNotNull(remotePlugin);
             properties.setRemoteSqlPluginPath(remotePlugin);
+
 
             String name = Preconditions.checkNotNull(cl.getOptionValue(OPTION_NAME));
             properties.setName(name);
@@ -164,9 +168,13 @@ public class LauncherOptionParser {
 
         for(Map.Entry<String, Object> one : mapConf.entrySet()){
             String key = one.getKey();
-            if(OPTION_FLINK_CONF_DIR.equalsIgnoreCase(key)
-                    || OPTION_YARN_CONF_DIR.equalsIgnoreCase(key)
-                    || OPTION_FLINK_JAR_PATH.equalsIgnoreCase(key)){
+
+//            if(OPTION_FLINK_CONF_DIR.equalsIgnoreCase(key)
+//                    || OPTION_YARN_CONF_DIR.equalsIgnoreCase(key)
+//                    || OPTION_FLINK_JAR_PATH.equalsIgnoreCase(key)){
+
+            if(OPTION_FLINK_CONF_DIR.equalsIgnoreCase(key)){
+
                 continue;
             }
 
