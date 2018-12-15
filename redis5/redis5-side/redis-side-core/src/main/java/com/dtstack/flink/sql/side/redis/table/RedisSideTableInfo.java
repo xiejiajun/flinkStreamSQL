@@ -35,7 +35,6 @@ public class RedisSideTableInfo extends SideTableInfo {
 
     public static final String TABLE_KEY = "tablename";
 
-<<<<<<< HEAD
     public static final String TIMEOUT = "timeout";
 
     public static final String MAXTOTAL = "maxTotal";
@@ -48,8 +47,6 @@ public class RedisSideTableInfo extends SideTableInfo {
 
     public static final String MASTER_NAME = "masterName";
 
-=======
->>>>>>> 97ce7a2d8187209946c49aa76c4e93527f066540
     private String url;
 
     private String database;
@@ -58,7 +55,6 @@ public class RedisSideTableInfo extends SideTableInfo {
 
     private String password;
 
-<<<<<<< HEAD
     private int timeout;
 
     private String maxTotal;
@@ -71,8 +67,7 @@ public class RedisSideTableInfo extends SideTableInfo {
 
     private String masterName;
 
-=======
->>>>>>> 97ce7a2d8187209946c49aa76c4e93527f066540
+
     public RedisSideTableInfo(){
         setType(CURR_TYPE);
     }
@@ -81,14 +76,9 @@ public class RedisSideTableInfo extends SideTableInfo {
     @Override
     public boolean check() {
         Preconditions.checkNotNull(url, "redis of URL is required");
-<<<<<<< HEAD
         Preconditions.checkNotNull(tableName, "redis of tablename is required");
         Preconditions.checkNotNull(redisType, "redis of type is required");
-=======
-        Preconditions.checkNotNull(database, "redis of database is required");
-        Preconditions.checkNotNull(tableName, "redis of tablename is required");
-        Preconditions.checkNotNull(password, "redis of password is required");
->>>>>>> 97ce7a2d8187209946c49aa76c4e93527f066540
+
         return true;
     }
 
@@ -123,7 +113,6 @@ public class RedisSideTableInfo extends SideTableInfo {
     public void setPassword(String password) {
         this.password = password;
     }
-<<<<<<< HEAD
 
     public int getTimeout() {
         return timeout;
@@ -172,6 +161,5 @@ public class RedisSideTableInfo extends SideTableInfo {
     public void setMasterName(String masterName) {
         this.masterName = masterName;
     }
-=======
->>>>>>> 97ce7a2d8187209946c49aa76c4e93527f066540
+
 }

@@ -39,6 +39,21 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
     //version
     private static final String CURR_TYPE = "kafka10";
 
+    public static final String PATTERNTOPIC_KEY = "patterntopic";
+
+    private Boolean patternTopic=false;
+
+    public Boolean getPatternTopic() {
+        return patternTopic;
+    }
+
+    public void setPatternTopic(Boolean patternTopic) {
+        if (patternTopic==null){
+            return;
+        }
+        this.patternTopic = patternTopic;
+    }
+
     public KafkaSourceTableInfo(){
         super.setType(CURR_TYPE);
     }

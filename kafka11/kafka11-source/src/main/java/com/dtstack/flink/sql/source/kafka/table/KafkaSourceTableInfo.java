@@ -21,8 +21,6 @@ package com.dtstack.flink.sql.source.kafka.table;
 
 import com.dtstack.flink.sql.table.SourceTableInfo;
 import org.apache.flink.calcite.shaded.com.google.common.base.Preconditions;
-import org.apache.flink.table.shaded.org.apache.commons.lang.BooleanUtils;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -40,10 +38,24 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
 	//version
 	private static final String CURR_TYPE = "kafka11";
 
+	public static final String PATTERNTOPIC_KEY = "patterntopic";
+
+	private Boolean patternTopic=false;
+
+	public Boolean getPatternTopic() {
+		return patternTopic;
+	}
+
+	public void setPatternTopic(Boolean patternTopic) {
+		if (patternTopic==null){
+			return;
+		}
+		this.patternTopic = patternTopic;
+	}
+
 	public KafkaSourceTableInfo() {
 		super.setType(CURR_TYPE);
 	}
-
 
 	public static Map<String, String> kafkaParam = new HashMap<String, String>();
 
@@ -55,10 +67,6 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
 		return kafkaParam.get(key);
 	}
 
-	public Boolean getKafkaBooleanParam(String key){
-		return Boolean.valueOf(kafkaParam.getOrDefault(key,"false").toLowerCase());
-	}
-
 	public Set<String> getKafkaParamKeys() {
 		return kafkaParam.keySet();
 	}
@@ -67,7 +75,6 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
 	public boolean check() {
 		Preconditions.checkNotNull(kafkaParam.get("bootstrap.servers"), "kafka of bootstrapServers is required");
 		Preconditions.checkNotNull(kafkaParam.get("topic"), "kafka of topic is required");
-		//Preconditions.checkNotNull(kafkaParam.get("groupId"), "kafka of groupId is required");
 		Preconditions.checkState(kafkaParam.get("auto.offset.reset").toString().equalsIgnoreCase("latest")
 				|| kafkaParam.get("auto.offset.reset").toString().equalsIgnoreCase("earliest"), "kafka of offsetReset set fail");
 		return false;
@@ -77,4 +84,5 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
 	public String getType() {
 		return super.getType();
 	}
+
 }

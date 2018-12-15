@@ -52,6 +52,9 @@ public class KafkaSource implements IStreamSourceGener<Table> {
         KafkaSourceTableInfo kafka08SourceTableInfo = (KafkaSourceTableInfo) sourceTableInfo;
         String topicName = kafka08SourceTableInfo.getKafkaParam("topic");
         String offsetReset = kafka08SourceTableInfo.getKafkaParam("auto.offset.reset");
+        //TODO
+        Boolean topicIsPattern = kafka08SourceTableInfo.getPatternTopic();
+
 
         Properties props = new Properties();
         for (String key:kafka08SourceTableInfo.getKafkaParamKeys()) {

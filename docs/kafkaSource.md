@@ -41,7 +41,7 @@ CREATE TABLE tableName(
 |kafka.bootstrap.servers | kafka bootstrap-server 地址信息(多个用逗号隔开)|是||
 |kafka.zookeeper.quorum | kafka zk地址信息(多个之间用逗号分隔)|是||
 |kafka.topic | 需要读取的 topic 名称|是||
-|kafka.topicIsPattern |  topic是否是正则表达式格式(true|false)  |否| false
+|patterntopic | topic是否是正则表达式格式(true|false)  |否| false
 |kafka.auto.offset.reset  | 读取的topic 的offset初始位置[latest\|earliest\|指定offset值({"0":12312,"1":12321,"2":12312},{"partition_no":offset_value})]|否|latest|
 |parallelism | 并行度设置|否|1|
 |sourcedatatype | 数据类型|否|json|
@@ -62,7 +62,7 @@ CREATE TABLE MyTable(
     kafka.auto.offset.reset ='latest',
     kafka.topic ='nbTest1,nbTest2,nbTest3',
     --kafka.topic ='mqTest.*',
-    --kafka.topicIsPattern='true'
+    --patterntopic='true'
     parallelism ='1',
     sourcedatatype ='json' #可不设置
  );

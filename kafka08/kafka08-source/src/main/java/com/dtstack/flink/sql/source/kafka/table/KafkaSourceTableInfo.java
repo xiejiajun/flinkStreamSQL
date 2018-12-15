@@ -33,6 +33,21 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
     //version
     private static final String CURR_TYPE = "kafka08";
 
+    public static final String PATTERNTOPIC_KEY = "patterntopic";
+
+    private Boolean patternTopic=false;
+
+    public Boolean getPatternTopic() {
+        return patternTopic;
+    }
+
+    public void setPatternTopic(Boolean patternTopic) {
+        if (patternTopic==null){
+            return;
+        }
+        this.patternTopic = patternTopic;
+    }
+
     public KafkaSourceTableInfo(){
         super.setType(CURR_TYPE);
     }
@@ -55,7 +70,6 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
     public boolean check() {
         Preconditions.checkNotNull(kafkaParam.get("bootstrap.servers"), "kafka of bootstrapServers is required");
         Preconditions.checkNotNull(kafkaParam.get("topic"), "kafka of topic is required");
-        Preconditions.checkNotNull(kafkaParam.get("groupId"), "kafka of groupId is required");
         Preconditions.checkState(kafkaParam.get("auto.offset.reset").toString().equalsIgnoreCase("earliest")
                 || kafkaParam.get("auto.offset.reset").toString().equalsIgnoreCase("latest"), "kafka of offsetReset set fail");
 

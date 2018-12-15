@@ -51,7 +51,7 @@ public class KafkaSinkTableInfo extends TargetTableInfo {
     public boolean check() {
         Preconditions.checkNotNull(kafkaParam.get("bootstrap.servers"), "kafka of bootstrapServers is required");
         Preconditions.checkNotNull(kafkaParam.get("topic"), "kafka of topic is required");
-        Preconditions.checkNotNull(kafkaParam.get("groupId"), "kafka of groupId is required");
+        //Preconditions.checkNotNull(kafkaParam.get("groupId"), "kafka of groupId is required");
         return false;
     }
 

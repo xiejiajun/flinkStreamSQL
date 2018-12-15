@@ -4,6 +4,7 @@
         <artifactId>sql.kafka11</artifactId>
         <groupId>com.dtstack.flink</groupId>
         <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,15 +14,6 @@
     <name>kafka11-source</name>
     <url>http://maven.apache.org</url>
 
-    <dependencies>
-
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-connector-kafka-0.11_2.11</artifactId>
-            <version>${flink.version}</version>
-        </dependency>
-
-    </dependencies>
 
 
     <build>
