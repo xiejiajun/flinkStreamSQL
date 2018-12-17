@@ -84,7 +84,6 @@ public class   LauncherMain {
             clusterClient.run(program, DEFAULT_PARALLELISM);
             clusterClient.shutdown();
 
-            System.exit(0);
         } else if(mode.equals(ClusterMode.yarnPer.name())){
             String pluginRoot = launcherOptions.getLocalSqlPluginPath();
             File jarFile = new File(getLocalCoreJarPath(pluginRoot));
@@ -97,7 +96,6 @@ public class   LauncherMain {
             final JobGraph jobGraph = PackagedProgramUtils.createJobGraph(program, new Configuration(), DEFAULT_PARALLELISM);
             ClusterClientFactory.startJob(launcherOptions,jobGraph);
 
-            System.exit(0);
         } else if(mode.equals(ClusterMode.compile.name())){
             String pluginRoot = launcherOptions.getLocalSqlPluginPath();
             File jarFile = new File(getLocalCoreJarPath(pluginRoot));
@@ -117,7 +115,6 @@ public class   LauncherMain {
             }finally {
                 System.out.println(result.toString());
             }
-            System.exit(0);
         }
 
         System.out.println("---submit end----");
