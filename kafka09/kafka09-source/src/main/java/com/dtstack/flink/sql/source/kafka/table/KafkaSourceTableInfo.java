@@ -81,9 +81,6 @@ public class KafkaSourceTableInfo extends SourceTableInfo {
 	public boolean check() {
 		Preconditions.checkNotNull(kafkaParam.get("bootstrap.servers"), "kafka of bootstrapServers is required");
 		Preconditions.checkNotNull(kafkaParam.get("topic"), "kafka of topic is required");
-		String offset = kafkaParam.get("auto.offset.reset");
-		Preconditions.checkState(offset.equalsIgnoreCase("latest")
-				|| offset.equalsIgnoreCase("earliest"), "kafka of offsetReset set fail");
 		return false;
 	}
 
