@@ -61,7 +61,7 @@ public class ClassUtil {
                 return Byte.class;
 
             case "long":
-                throw new RuntimeException(str + " type is not supported, please use BIGINT.");
+                throw new IllegalArgumentException(str + " type is not supported, please use BIGINT.");
             case "bigint":
             case "intunsigned":
             case "integerunsigned":
