@@ -116,7 +116,13 @@ public abstract class AbstractTableParser {
                 fieldExtraInfo = new AbstractTableInfo.FieldExtraInfo();
                 fieldExtraInfo.setLength(Integer.valueOf(matcher.group(1)));
             } else {
-                fieldClass = dbTypeConvertToJavaType(fieldType);
+                try {
+                    fieldClass = dbTypeConvertToJavaType(fieldType);
+                } catch (RuntimeException e) {
+                    throw new RuntimeException(
+                        String.format("%s. Error table is [%s].", e.getMessage(), tableInfo.getName())
+                    );
+                }
             }
 
             tableInfo.addPhysicalMappings(fieldName, fieldName);
