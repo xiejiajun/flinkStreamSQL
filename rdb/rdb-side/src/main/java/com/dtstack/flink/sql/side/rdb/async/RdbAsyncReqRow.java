@@ -28,7 +28,6 @@ import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.rdb.table.RdbSideTableInfo;
 import com.dtstack.flink.sql.side.rdb.util.SwitchUtil;
 import com.dtstack.flink.sql.util.DateUtil;
-import com.dtstack.flink.sql.util.RowDataComplete;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.vertx.core.json.JsonArray;
@@ -38,14 +37,11 @@ import io.vertx.ext.sql.SQLConnection;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
-import java.security.PrivilegedAction;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -115,10 +111,10 @@ public class RdbAsyncReqRow extends BaseAsyncReqRow {
     }
 
     @Override
-    protected void preInvoke(Row input, ResultFuture<BaseRow> resultFuture) { }
+    protected void preInvoke(Row input, ResultFuture<Row> resultFuture) { }
 
     @Override
-    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture) throws Exception {
+    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture) throws Exception {
         AtomicLong networkLogCounter = new AtomicLong(0L);
         //network is unhealthy
         while (!connectionStatus.get()) {
@@ -133,7 +129,7 @@ public class RdbAsyncReqRow extends BaseAsyncReqRow {
 
     protected void asyncQueryData(        Map<String, Object> inputParams,
                                   Row input,
-                                  ResultFuture<BaseRow> resultFuture,
+                                  ResultFuture<Row> resultFuture,
                                   SQLClient rdbSqlClient,
                                   AtomicLong failCounter,
                                   AtomicBoolean finishFlag,
@@ -149,7 +145,7 @@ public class RdbAsyncReqRow extends BaseAsyncReqRow {
     final protected void doAsyncQueryData(
         Map<String, Object> inputParams,
         Row input,
-        ResultFuture<BaseRow> resultFuture,
+        ResultFuture<Row> resultFuture,
         SQLClient rdbSqlClient,
         AtomicLong failCounter,
         AtomicBoolean finishFlag,
@@ -180,7 +176,7 @@ public class RdbAsyncReqRow extends BaseAsyncReqRow {
         });
     }
 
-    private void connectWithRetry(Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture, SQLClient rdbSqlClient) {
+    private void connectWithRetry(Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture, SQLClient rdbSqlClient) {
         AtomicLong failCounter = new AtomicLong(0);
         AtomicBoolean finishFlag = new AtomicBoolean(false);
         while (!finishFlag.get()) {
@@ -294,7 +290,7 @@ public class RdbAsyncReqRow extends BaseAsyncReqRow {
         this.rdbSqlClient = rdbSqlClient;
     }
 
-    private void handleQuery(SQLConnection connection, Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture) {
+    private void handleQuery(SQLConnection connection, Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture) {
         String key = buildCacheKey(inputParams);
         JsonArray params = new JsonArray(Lists.newArrayList(inputParams.values()));
         connection.queryWithParams(sideInfo.getSqlCondition(), params, rs -> {
@@ -320,7 +316,7 @@ public class RdbAsyncReqRow extends BaseAsyncReqRow {
                 if (openCache()) {
                     putCache(key, CacheObj.buildCacheObj(ECacheContentType.MultiLine, cacheContent));
                 }
-                RowDataComplete.completeRow(resultFuture, rowList);
+                resultFuture.complete(rowList);
             } else {
                 dealMissKey(input, resultFuture);
                 if (openCache()) {

@@ -227,19 +227,27 @@ public class SideSqlExec {
 
 
     /**
-     * 对时间类型进行类型转换
      *
-     * @param leftTypeInfo
+     * @param sideJoinFieldInfo
+     * @param mappingTable
      * @return
      */
-    private RowTypeInfo buildLeftTableOutType(RowTypeInfo leftTypeInfo) {
-        TypeInformation[] sideOutTypes = new TypeInformation[leftTypeInfo.getFieldNames().length];
-        TypeInformation<?>[] fieldTypes = leftTypeInfo.getFieldTypes();
-        for (int i = 0; i < sideOutTypes.length; i++) {
-            sideOutTypes[i] = convertTimeAttributeType(fieldTypes[i]);
+    private RowTypeInfo buildRoweOutType(List<FieldInfo> sideJoinFieldInfo,
+                                         HashBasedTable<String, String, String> mappingTable) {
+        TypeInformation[] sideOutTypes = new TypeInformation[sideJoinFieldInfo.size()];
+        String[] sideOutNames = new String[sideJoinFieldInfo.size()];
+        for (int i = 0; i < sideJoinFieldInfo.size(); i++) {
+            FieldInfo fieldInfo = sideJoinFieldInfo.get(i);
+            String tableName = fieldInfo.getTable();
+            String fieldName = fieldInfo.getFieldName();
+
+            String mappingFieldName = mappingTable.get(tableName, fieldName);
+            Preconditions.checkNotNull(mappingFieldName, fieldInfo + " not mapping any field! it may be frame bug");
+
+            sideOutTypes[i] = fieldInfo.getTypeInformation();
+            sideOutNames[i] = mappingFieldName;
         }
-        RowTypeInfo rowTypeInfo = new RowTypeInfo(sideOutTypes, leftTypeInfo.getFieldNames());
-        return rowTypeInfo;
+        return new RowTypeInfo(sideOutTypes, sideOutNames);
     }
 
     private TypeInformation convertTimeAttributeType(TypeInformation typeInformation) {
@@ -374,7 +382,6 @@ public class SideSqlExec {
         BaseRowTypeInfo leftBaseTypeInfo = new BaseRowTypeInfo(logicalTypes, leftTable.getSchema().getFieldNames());
 
         leftScopeChild.setRowTypeInfo(leftTypeInfo);
-        leftScopeChild.setBaseRowTypeInfo(leftBaseTypeInfo);
 
         JoinScope.ScopeChild rightScopeChild = new JoinScope.ScopeChild();
         rightScopeChild.setAlias(joinInfo.getRightTableAlias());
@@ -428,7 +435,7 @@ public class SideSqlExec {
             dsOut = SideAsyncOperator.getSideJoinDataStream(adaptStream, sideTableInfo.getType(), localSqlPluginPath, typeInfo, joinInfo, sideJoinFieldInfo, sideTableInfo, pluginLoadMode);
         }
 
-        BaseRowTypeInfo sideOutTypeInfo = buildOutRowTypeInfo(sideJoinFieldInfo, mappingTable);
+        RowTypeInfo sideOutTypeInfo = buildRoweOutType(sideJoinFieldInfo, mappingTable);
 
         dsOut.getTransformation().setOutputType(sideOutTypeInfo);
 
