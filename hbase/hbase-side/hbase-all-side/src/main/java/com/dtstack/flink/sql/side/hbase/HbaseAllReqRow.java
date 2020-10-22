@@ -26,13 +26,11 @@ import com.dtstack.flink.sql.side.FieldInfo;
 import com.dtstack.flink.sql.side.JoinInfo;
 import com.dtstack.flink.sql.side.hbase.table.HbaseSideTableInfo;
 import com.dtstack.flink.sql.side.hbase.utils.HbaseConfigUtils;
-import com.dtstack.flink.sql.util.RowDataComplete;
 import com.dtstack.flink.sql.side.hbase.utils.HbaseUtils;
 import com.google.common.collect.Maps;
 import org.apache.calcite.sql.JoinType;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
@@ -40,19 +38,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-
 import java.security.PrivilegedAction;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -138,7 +130,7 @@ public class HbaseAllReqRow extends BaseAllReqRow {
     }
 
     @Override
-    public void flatMap(Row input, Collector<BaseRow> out) throws Exception {
+    public void flatMap(Row input, Collector<Row> out) throws Exception {
         Map<String, Object> refData = Maps.newHashMap();
         for (int i = 0; i < sideInfo.getEqualValIndex().size(); i++) {
             Integer conValIndex = sideInfo.getEqualValIndex().get(i);
@@ -146,7 +138,7 @@ public class HbaseAllReqRow extends BaseAllReqRow {
             if (equalObj == null) {
                 if (sideInfo.getJoinType() == JoinType.LEFT) {
                     Row data = fillData(input, null);
-                    RowDataComplete.collectRow(out, data);
+                    out.collect(data);
                 }
                 return;
             }
@@ -164,13 +156,13 @@ public class HbaseAllReqRow extends BaseAllReqRow {
                 if (entry.getKey().startsWith(rowKeyStr)) {
                     cacheList = cacheRef.get().get(entry.getKey());
                     Row row = fillData(input, cacheList);
-                    RowDataComplete.collectRow(out, row);
+                    out.collect(row);
                 }
             }
         } else {
             cacheList = cacheRef.get().get(rowKeyStr);
             Row row = fillData(input, cacheList);
-            RowDataComplete.collectRow(out, row);
+            out.collect(row);
         }
 
     }

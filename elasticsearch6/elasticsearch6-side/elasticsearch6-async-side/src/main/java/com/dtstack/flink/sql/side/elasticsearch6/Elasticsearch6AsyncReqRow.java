@@ -18,14 +18,6 @@
 
 package com.dtstack.flink.sql.side.elasticsearch6;
 
-import com.dtstack.flink.sql.util.RowDataComplete;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
-import org.apache.flink.types.Row;
-
 import com.dtstack.flink.sql.enums.ECacheContentType;
 import com.dtstack.flink.sql.side.*;
 import com.dtstack.flink.sql.side.cache.CacheObj;
@@ -36,6 +28,11 @@ import com.dtstack.flink.sql.util.ParseUtils;
 import com.google.common.collect.Lists;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.functions.async.ResultFuture;
+import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
+import org.apache.flink.types.Row;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -82,7 +79,7 @@ public class Elasticsearch6AsyncReqRow extends BaseAsyncReqRow implements Serial
 
 
     @Override
-    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture) throws Exception {
+    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture) throws Exception {
         String key = buildCacheKey(inputParams);
         BoolQueryBuilder boolQueryBuilder = Es6Util.setPredicateclause(sideInfo);
         boolQueryBuilder = setInputParams(inputParams, boolQueryBuilder);
@@ -122,7 +119,7 @@ public class Elasticsearch6AsyncReqRow extends BaseAsyncReqRow implements Serial
                             searchHits = searchResponse.getHits().getHits();
                         }
                         dealCacheData(key, CacheObj.buildCacheObj(ECacheContentType.MultiLine, cacheContent));
-                        RowDataComplete.completeRow(resultFuture, rowList);
+                        resultFuture.complete(rowList);
                     } catch (Exception e) {
                         dealFillDataError(input, resultFuture, e);
                     } finally {
