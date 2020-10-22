@@ -18,19 +18,16 @@
 
 package com.dtstack.flink.sql.side.elasticsearch6;
 
-import com.dtstack.flink.sql.side.elasticsearch6.util.Es6Util;
-import com.dtstack.flink.sql.util.RowDataComplete;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
-import org.apache.flink.types.Row;
-
 import com.dtstack.flink.sql.enums.ECacheContentType;
-import com.dtstack.flink.sql.side.*;
+import com.dtstack.flink.sql.side.AbstractSideTableInfo;
+import com.dtstack.flink.sql.side.BaseAsyncReqRow;
+import com.dtstack.flink.sql.side.CacheMissVal;
+import com.dtstack.flink.sql.side.FieldInfo;
+import com.dtstack.flink.sql.side.JoinInfo;
+import com.dtstack.flink.sql.side.PredicateInfo;
 import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.elasticsearch6.table.Elasticsearch6SideTableInfo;
+import com.dtstack.flink.sql.side.elasticsearch6.util.Es6Util;
 import com.dtstack.flink.sql.util.ParseUtils;
 import com.google.common.collect.Lists;
 import org.apache.calcite.sql.SqlNode;
