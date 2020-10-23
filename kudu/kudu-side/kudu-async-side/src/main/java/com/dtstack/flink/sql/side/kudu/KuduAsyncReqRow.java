@@ -1,16 +1,11 @@
 package com.dtstack.flink.sql.side.kudu;
 
 import com.dtstack.flink.sql.enums.ECacheContentType;
-import com.dtstack.flink.sql.side.AbstractSideTableInfo;
-import com.dtstack.flink.sql.side.BaseAsyncReqRow;
-import com.dtstack.flink.sql.side.CacheMissVal;
-import com.dtstack.flink.sql.side.FieldInfo;
-import com.dtstack.flink.sql.side.JoinInfo;
-import com.dtstack.flink.sql.side.PredicateInfo;
+import com.dtstack.flink.sql.side.*;
 import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.kudu.table.KuduSideTableInfo;
 import com.dtstack.flink.sql.side.kudu.utils.KuduUtil;
-import com.dtstack.flink.sql.util.RowDataComplete;
+import com.dtstack.flink.sql.util.KrbUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.stumbleupon.async.Callback;
@@ -19,21 +14,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kudu.ColumnSchema;
 import org.apache.kudu.Schema;
-import org.apache.kudu.client.AsyncKuduClient;
-import org.apache.kudu.client.AsyncKuduScanner;
-import org.apache.kudu.client.KuduException;
-import org.apache.kudu.client.KuduPredicate;
-import org.apache.kudu.client.KuduTable;
-import org.apache.kudu.client.RowResult;
-import org.apache.kudu.client.RowResultIterator;
+import org.apache.kudu.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -78,25 +69,10 @@ public class KuduAsyncReqRow extends BaseAsyncReqRow {
      *
      * @throws KuduException
      */
-    private void connKuDu() throws KuduException {
+    private void connKuDu() throws IOException {
         if (null == table) {
-            String kuduMasters = kuduSideTableInfo.getKuduMasters();
             String tableName = kuduSideTableInfo.getTableName();
-            Integer workerCount = kuduSideTableInfo.getWorkerCount();
-            Integer defaultSocketReadTimeoutMs = kuduSideTableInfo.getDefaultSocketReadTimeoutMs();
-            Integer defaultOperationTimeoutMs = kuduSideTableInfo.getDefaultOperationTimeoutMs();
-
-            Preconditions.checkNotNull(kuduMasters, "kuduMasters could not be null");
-
-            AsyncKuduClient.AsyncKuduClientBuilder asyncKuduClientBuilder = new AsyncKuduClient.AsyncKuduClientBuilder(kuduMasters);
-            if (null != workerCount) {
-                asyncKuduClientBuilder.workerCount(workerCount);
-            }
-
-            if (null != defaultOperationTimeoutMs) {
-                asyncKuduClientBuilder.defaultOperationTimeoutMs(defaultOperationTimeoutMs);
-            }
-            asyncClient = asyncKuduClientBuilder.build();
+            asyncClient = getClient();
             if (!asyncClient.syncClient().tableExists(tableName)) {
                 throw new IllegalArgumentException("Table Open Failed , please check table exists");
             }
@@ -126,8 +102,42 @@ public class KuduAsyncReqRow extends BaseAsyncReqRow {
         scannerBuilder.setProjectedColumnNames(projectColumns);
     }
 
+    private AsyncKuduClient getClient() throws IOException {
+        String kuduMasters = kuduSideTableInfo.getKuduMasters();
+        Integer workerCount = kuduSideTableInfo.getWorkerCount();
+        Integer defaultOperationTimeoutMs = kuduSideTableInfo.getDefaultOperationTimeoutMs();
+
+        Preconditions.checkNotNull(kuduMasters, "kuduMasters could not be null");
+
+        AsyncKuduClient.AsyncKuduClientBuilder asyncKuduClientBuilder = new AsyncKuduClient.AsyncKuduClientBuilder(kuduMasters);
+        if (null != workerCount) {
+            asyncKuduClientBuilder.workerCount(workerCount);
+        }
+
+        if (null != defaultOperationTimeoutMs) {
+            asyncKuduClientBuilder.defaultOperationTimeoutMs(defaultOperationTimeoutMs);
+        }
+
+        if (kuduSideTableInfo.isEnableKrb()) {
+            UserGroupInformation ugi = KrbUtils.getUgi(
+                kuduSideTableInfo.getPrincipal(),
+                kuduSideTableInfo.getKeytab(),
+                kuduSideTableInfo.getKrb5conf()
+            );
+            return ugi.doAs(
+                new PrivilegedAction<AsyncKuduClient>() {
+                    @Override
+                    public AsyncKuduClient run() {
+                        return asyncKuduClientBuilder.build();
+                    }
+                });
+        } else {
+            return asyncKuduClientBuilder.build();
+        }
+    }
+
     @Override
-    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture) throws Exception {
+    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture) throws Exception {
         Row inputCopy = Row.copy(input);
         //scannerBuilder 设置为null重新加载过滤条件,然后connkudu重新赋值
         //todo:代码需要优化
@@ -209,7 +219,7 @@ public class KuduAsyncReqRow extends BaseAsyncReqRow {
         private List<Map<String, Object>> cacheContent;
         private List<Row> rowList;
         private AsyncKuduScanner asyncKuduScanner;
-        private ResultFuture<BaseRow> resultFuture;
+        private ResultFuture<Row> resultFuture;
         private String key;
 
 
@@ -217,7 +227,7 @@ public class KuduAsyncReqRow extends BaseAsyncReqRow {
         }
 
         GetListRowCB(Row input, List<Map<String, Object>> cacheContent, List<Row> rowList,
-                     AsyncKuduScanner asyncKuduScanner, ResultFuture<BaseRow> resultFuture, String key) {
+                     AsyncKuduScanner asyncKuduScanner, ResultFuture<Row> resultFuture, String key) {
             this.input = input;
             this.cacheContent = cacheContent;
             this.rowList = rowList;
@@ -251,7 +261,7 @@ public class KuduAsyncReqRow extends BaseAsyncReqRow {
                 if (openCache()) {
                     putCache(key, CacheObj.buildCacheObj(ECacheContentType.MultiLine, cacheContent));
                 }
-                RowDataComplete.completeRow(resultFuture, rowList);
+                resultFuture.complete(rowList);
             } else {
                 dealMissKey(input, resultFuture);
                 if (openCache()) {

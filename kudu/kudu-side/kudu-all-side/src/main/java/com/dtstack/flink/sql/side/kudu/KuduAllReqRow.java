@@ -1,13 +1,9 @@
 package com.dtstack.flink.sql.side.kudu;
 
-import com.dtstack.flink.sql.side.BaseAllReqRow;
-import com.dtstack.flink.sql.side.FieldInfo;
-import com.dtstack.flink.sql.side.JoinInfo;
-import com.dtstack.flink.sql.side.PredicateInfo;
-import com.dtstack.flink.sql.side.AbstractSideTableInfo;
+import com.dtstack.flink.sql.side.*;
 import com.dtstack.flink.sql.side.kudu.table.KuduSideTableInfo;
 import com.dtstack.flink.sql.side.kudu.utils.KuduUtil;
-import com.dtstack.flink.sql.util.RowDataComplete;
+import com.dtstack.flink.sql.util.KrbUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -15,28 +11,19 @@ import org.apache.calcite.sql.JoinType;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kudu.ColumnSchema;
 import org.apache.kudu.Schema;
-import org.apache.kudu.client.KuduClient;
-import org.apache.kudu.client.KuduException;
-import org.apache.kudu.client.KuduPredicate;
-import org.apache.kudu.client.KuduScanner;
-import org.apache.kudu.client.KuduTable;
-import org.apache.kudu.client.PartialRow;
-import org.apache.kudu.client.RowResult;
-import org.apache.kudu.client.RowResultIterator;
+import org.apache.kudu.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class KuduAllReqRow extends BaseAllReqRow {
@@ -64,28 +51,6 @@ public class KuduAllReqRow extends BaseAllReqRow {
         super(new KuduAllSideInfo(rowTypeInfo, joinInfo, outFieldInfoList, sideTableInfo));
     }
 
-
-    @Override
-    public Row fillData(Row input, Object sideInput) {
-        Map<String, Object> cacheInfo = (Map<String, Object>) sideInput;
-        Row row = new Row(sideInfo.getOutFieldInfoList().size());
-        for (Map.Entry<Integer, Integer> entry : sideInfo.getInFieldIndex().entrySet()) {
-            Object obj = input.getField(entry.getValue());
-            obj = convertTimeIndictorTypeInfo(entry.getValue(), obj);
-            row.setField(entry.getKey(), obj);
-        }
-
-        for (Map.Entry<Integer, String> entry : sideInfo.getSideFieldNameIndex().entrySet()) {
-            if (cacheInfo == null) {
-                row.setField(entry.getKey(), null);
-            } else {
-                row.setField(entry.getKey(), cacheInfo.get(entry.getValue()));
-            }
-        }
-
-        return row;
-    }
-
     @Override
     protected void initCache() throws SQLException {
         Map<String, List<Map<String, Object>>> newCache = Maps.newConcurrentMap();
@@ -106,7 +71,7 @@ public class KuduAllReqRow extends BaseAllReqRow {
 
 
     @Override
-    public void flatMap(Row input, Collector<BaseRow> out) throws Exception {
+    public void flatMap(Row input, Collector<Row> out) throws Exception {
         List<Object> inputParams = Lists.newArrayList();
         for (Integer conValIndex : sideInfo.getEqualValIndex()) {
             Object equalObj = input.getField(conValIndex);
@@ -121,14 +86,14 @@ public class KuduAllReqRow extends BaseAllReqRow {
         if (CollectionUtils.isEmpty(cacheList)) {
             if (sideInfo.getJoinType() == JoinType.LEFT) {
                 Row row = fillData(input, null);
-                RowDataComplete.collectRow(out, row);
+                out.collect(row);
             }
             return;
         }
 
         for (Map<String, Object> one : cacheList) {
             Row row = fillData(input, one);
-            RowDataComplete.collectRow(out, row);
+            out.collect(row);
         }
     }
 
@@ -211,24 +176,8 @@ public class KuduAllReqRow extends BaseAllReqRow {
     private KuduScanner getConn(KuduSideTableInfo tableInfo) {
         try {
             if (client == null) {
-                String kuduMasters = tableInfo.getKuduMasters();
                 String tableName = tableInfo.getTableName();
-                Integer workerCount = tableInfo.getWorkerCount();
-                Integer defaultSocketReadTimeoutMs = tableInfo.getDefaultSocketReadTimeoutMs();
-                Integer defaultOperationTimeoutMs = tableInfo.getDefaultOperationTimeoutMs();
-
-                Preconditions.checkNotNull(kuduMasters, "kuduMasters could not be null");
-
-                KuduClient.KuduClientBuilder kuduClientBuilder = new KuduClient.KuduClientBuilder(kuduMasters);
-                if (null != workerCount) {
-                    kuduClientBuilder.workerCount(workerCount);
-                }
-
-                if (null != defaultOperationTimeoutMs) {
-                    kuduClientBuilder.defaultOperationTimeoutMs(defaultOperationTimeoutMs);
-                }
-                client = kuduClientBuilder.build();
-
+                client = getClient(tableInfo);
                 if (!client.tableExists(tableName)) {
                     throw new IllegalArgumentException("Table Open Failed , please check table exists");
                 }
@@ -243,7 +192,35 @@ public class KuduAllReqRow extends BaseAllReqRow {
         }
     }
 
+    private KuduClient getClient(KuduSideTableInfo tableInfo) throws IOException {
+        String kuduMasters = tableInfo.getKuduMasters();
+        Integer workerCount = tableInfo.getWorkerCount();
+        Integer defaultOperationTimeoutMs = tableInfo.getDefaultOperationTimeoutMs();
 
+        Preconditions.checkNotNull(kuduMasters, "kuduMasters could not be null");
+
+        KuduClient.KuduClientBuilder kuduClientBuilder = new KuduClient.KuduClientBuilder(kuduMasters);
+
+        if (null != workerCount) {
+            kuduClientBuilder.workerCount(workerCount);
+        }
+
+        if (null != defaultOperationTimeoutMs) {
+            kuduClientBuilder.defaultOperationTimeoutMs(defaultOperationTimeoutMs);
+        }
+
+        if (tableInfo.isEnableKrb()) {
+            UserGroupInformation ugi = KrbUtils.getUgi(tableInfo.getPrincipal(), tableInfo.getKeytab(), tableInfo.getKrb5conf());
+            return ugi.doAs(new PrivilegedAction<KuduClient>() {
+                @Override
+                public KuduClient run() {
+                    return kuduClientBuilder.build();
+                }
+            });
+        } else {
+            return kuduClientBuilder.build();
+        }
+    }
     /**
      * @param builder   创建AsyncKuduScanner对象
      * @param schema    kudu中表约束

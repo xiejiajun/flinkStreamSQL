@@ -26,14 +26,12 @@ import com.dtstack.flink.sql.side.BaseAllReqRow;
 import com.dtstack.flink.sql.side.FieldInfo;
 import com.dtstack.flink.sql.side.JoinInfo;
 import com.dtstack.flink.sql.side.cassandra.table.CassandraSideTableInfo;
-import com.dtstack.flink.sql.util.RowDataComplete;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.calcite.sql.JoinType;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
@@ -73,27 +71,6 @@ public class CassandraAllReqRow extends BaseAllReqRow {
     }
 
     @Override
-    public Row fillData(Row input, Object sideInput) {
-        Map<String, Object> cacheInfo = (Map<String, Object>) sideInput;
-        Row row = new Row(sideInfo.getOutFieldInfoList().size());
-        for (Map.Entry<Integer, Integer> entry : sideInfo.getInFieldIndex().entrySet()) {
-            Object obj = input.getField(entry.getValue());
-            obj = convertTimeIndictorTypeInfo(entry.getValue(), obj);
-            row.setField(entry.getKey(), obj);
-        }
-
-        for (Map.Entry<Integer, String> entry : sideInfo.getSideFieldNameIndex().entrySet()) {
-            if (cacheInfo == null) {
-                row.setField(entry.getKey(), null);
-            } else {
-                row.setField(entry.getKey(), cacheInfo.get(entry.getValue()));
-            }
-        }
-
-        return row;
-    }
-
-    @Override
     protected void initCache() throws SQLException {
         Map<String, List<Map<String, Object>>> newCache = Maps.newConcurrentMap();
         cacheRef.set(newCache);
@@ -116,14 +93,14 @@ public class CassandraAllReqRow extends BaseAllReqRow {
 
 
     @Override
-    public void flatMap(Row input, Collector<BaseRow> out) throws Exception {
+    public void flatMap(Row input, Collector<Row> out) throws Exception {
         List<Object> inputParams = Lists.newArrayList();
         for (Integer conValIndex : sideInfo.getEqualValIndex()) {
             Object equalObj = input.getField(conValIndex);
             if (equalObj == null) {
                 if (sideInfo.getJoinType() == JoinType.LEFT) {
                     Row row = fillData(input, null);
-                    RowDataComplete.collectRow(out, row);
+                    out.collect(row);
                 }
                 return;
             }
@@ -136,7 +113,7 @@ public class CassandraAllReqRow extends BaseAllReqRow {
         if (CollectionUtils.isEmpty(cacheList)) {
             if (sideInfo.getJoinType() == JoinType.LEFT) {
                 Row row = fillData(input, null);
-                RowDataComplete.collectRow(out, row);
+                out.collect(row);
             } else {
                 return;
             }
@@ -146,7 +123,7 @@ public class CassandraAllReqRow extends BaseAllReqRow {
 
         for (Map<String, Object> one : cacheList) {
             Row row = fillData(input, one);
-            RowDataComplete.collectRow(out, row);
+            out.collect(row);
         }
 
     }

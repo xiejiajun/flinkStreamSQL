@@ -28,13 +28,19 @@ import com.dtstack.flink.sql.side.operator.SideAsyncOperator;
 import com.dtstack.flink.sql.side.operator.SideWithAllCacheOperator;
 import com.dtstack.flink.sql.util.ClassUtil;
 import com.dtstack.flink.sql.util.ParseUtils;
+import com.dtstack.flink.sql.util.SqlCheckUtils;
 import com.dtstack.flink.sql.util.TableUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.calcite.sql.*;
+import org.apache.calcite.sql.SqlBasicCall;
+import org.apache.calcite.sql.SqlIdentifier;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlWithItem;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -131,7 +137,7 @@ public class SideSqlExec {
 
                 } else if (pollSqlNode.getKind() == SELECT) {
                     Preconditions.checkState(createView != null, "select sql must included by create view");
-                    Table table = tableEnv.sqlQuery(pollObj.toString());
+                    Table table = SqlCheckUtils.sqlQueryWithCheck(tableEnv, pollObj.toString());
 
                     if (createView.getFieldsInfoStr() == null) {
                         tableEnv.registerTable(createView.getTableName(), table);
@@ -227,19 +233,27 @@ public class SideSqlExec {
 
 
     /**
-     * 对时间类型进行类型转换
      *
-     * @param leftTypeInfo
+     * @param sideJoinFieldInfo
+     * @param mappingTable
      * @return
      */
-    private RowTypeInfo buildLeftTableOutType(RowTypeInfo leftTypeInfo) {
-        TypeInformation[] sideOutTypes = new TypeInformation[leftTypeInfo.getFieldNames().length];
-        TypeInformation<?>[] fieldTypes = leftTypeInfo.getFieldTypes();
-        for (int i = 0; i < sideOutTypes.length; i++) {
-            sideOutTypes[i] = convertTimeAttributeType(fieldTypes[i]);
+    private RowTypeInfo buildRoweOutType(List<FieldInfo> sideJoinFieldInfo,
+                                         HashBasedTable<String, String, String> mappingTable) {
+        TypeInformation[] sideOutTypes = new TypeInformation[sideJoinFieldInfo.size()];
+        String[] sideOutNames = new String[sideJoinFieldInfo.size()];
+        for (int i = 0; i < sideJoinFieldInfo.size(); i++) {
+            FieldInfo fieldInfo = sideJoinFieldInfo.get(i);
+            String tableName = fieldInfo.getTable();
+            String fieldName = fieldInfo.getFieldName();
+
+            String mappingFieldName = mappingTable.get(tableName, fieldName);
+            Preconditions.checkNotNull(mappingFieldName, fieldInfo + " not mapping any field! it may be frame bug");
+
+            sideOutTypes[i] = fieldInfo.getTypeInformation();
+            sideOutNames[i] = mappingFieldName;
         }
-        RowTypeInfo rowTypeInfo = new RowTypeInfo(sideOutTypes, leftTypeInfo.getFieldNames());
-        return rowTypeInfo;
+        return new RowTypeInfo(sideOutTypes, sideOutNames);
     }
 
     private TypeInformation convertTimeAttributeType(TypeInformation typeInformation) {
@@ -291,6 +305,64 @@ public class SideSqlExec {
             res.add(sideTableInfo.getPhysicalFields().getOrDefault(field, field));
         });
         return res;
+    }
+
+    /**
+     * check whether all table fields exist in join condition.
+     * @param conditionNode
+     * @param joinScope
+     */
+    public void checkConditionFieldsInTable(SqlNode conditionNode, JoinScope joinScope) {
+        List<SqlNode> sqlNodeList = Lists.newArrayList();
+        ParseUtils.parseAnd(conditionNode, sqlNodeList);
+        for (SqlNode sqlNode : sqlNodeList) {
+            if (!SqlKind.COMPARISON.contains(sqlNode.getKind())) {
+                throw new RuntimeException("not compare operator.");
+            }
+
+            SqlNode leftNode = ((SqlBasicCall) sqlNode).getOperands()[0];
+            SqlNode rightNode = ((SqlBasicCall) sqlNode).getOperands()[1];
+
+            if (leftNode.getKind() == SqlKind.IDENTIFIER) {
+                checkFieldInTable((SqlIdentifier) leftNode, joinScope, conditionNode);
+            }
+
+            if (rightNode.getKind() == SqlKind.IDENTIFIER) {
+                checkFieldInTable((SqlIdentifier) rightNode, joinScope, conditionNode);
+            }
+
+        }
+    }
+
+    /**
+     * check whether table exists and whether field is in table.
+     * @param sqlNode
+     * @param joinScope
+     * @param conditionNode
+     */
+    private void checkFieldInTable(SqlIdentifier sqlNode, JoinScope joinScope, SqlNode conditionNode) {
+        String tableName = sqlNode.getComponent(0).getSimple();
+        String fieldName = sqlNode.getComponent(1).getSimple();
+        JoinScope.ScopeChild scopeChild = joinScope.getScope(tableName);
+        String tableErrorMsg = "table [%s] is not exist. error condition is [%s]. if you find [%s] is exist, please check AS statement";
+        Preconditions.checkState(
+            scopeChild != null,
+            tableErrorMsg,
+            tableName,
+            conditionNode.toString(),
+            tableName
+        );
+
+        String[] fieldNames = scopeChild.getRowTypeInfo().getFieldNames();
+        boolean hasField = Arrays.asList(fieldNames).contains(fieldName);
+        String fieldErrorMsg = "table [%s] has not [%s] field.\n error join condition is [%s]";
+        Preconditions.checkState(
+            hasField,
+            fieldErrorMsg,
+            tableName,
+            fieldName,
+            conditionNode.toString()
+        );
     }
 
     public List<String> getConditionFields(SqlNode conditionNode, String specifyTableName, AbstractSideTableInfo sideTableInfo) {
@@ -374,7 +446,6 @@ public class SideSqlExec {
         BaseRowTypeInfo leftBaseTypeInfo = new BaseRowTypeInfo(logicalTypes, leftTable.getSchema().getFieldNames());
 
         leftScopeChild.setRowTypeInfo(leftTypeInfo);
-        leftScopeChild.setBaseRowTypeInfo(leftBaseTypeInfo);
 
         JoinScope.ScopeChild rightScopeChild = new JoinScope.ScopeChild();
         rightScopeChild.setAlias(joinInfo.getRightTableAlias());
@@ -395,6 +466,7 @@ public class SideSqlExec {
         joinScope.addScope(rightScopeChild);
 
         HashBasedTable<String, String, String> mappingTable = ((JoinInfo) pollObj).getTableFieldRef();
+        checkConditionFieldsInTable(joinInfo.getCondition(), joinScope);
 
         //获取两个表的所有字段
         List<FieldInfo> sideJoinFieldInfo = ParserJoinField.getRowTypeInfo(joinInfo.getSelectNode(), joinScope, true);
@@ -409,10 +481,9 @@ public class SideSqlExec {
 
         RowTypeInfo typeInfo = new RowTypeInfo(targetTable.getSchema().getFieldTypes(), targetTable.getSchema().getFieldNames());
 
-        DataStream adaptStream = tableEnv.toRetractStream(targetTable, Row.class)
+        DataStream adaptStream = tableEnv.toRetractStream(targetTable, typeInfo)
                 .filter(f -> f.f0)
-                .map(f -> f.f1)
-                .returns(Row.class);
+                .map(f -> f.f1);
 
         //join side table before keyby ===> Reducing the size of each dimension table cache of async
         if (sideTableInfo.isPartitionedJoin()) {
@@ -429,7 +500,7 @@ public class SideSqlExec {
             dsOut = SideAsyncOperator.getSideJoinDataStream(adaptStream, sideTableInfo.getType(), localSqlPluginPath, typeInfo, joinInfo, sideJoinFieldInfo, sideTableInfo, pluginLoadMode);
         }
 
-        BaseRowTypeInfo sideOutTypeInfo = buildOutRowTypeInfo(sideJoinFieldInfo, mappingTable);
+        RowTypeInfo sideOutTypeInfo = buildRoweOutType(sideJoinFieldInfo, mappingTable);
 
         dsOut.getTransformation().setOutputType(sideOutTypeInfo);
 
