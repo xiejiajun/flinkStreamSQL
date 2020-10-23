@@ -60,6 +60,8 @@ public class ClassUtil {
             case "blob":
                 return Byte.class;
 
+            case "long":
+                throw new IllegalArgumentException(str + " type is not supported, please use BIGINT.");
             case "bigint":
             case "intunsigned":
             case "integerunsigned":
