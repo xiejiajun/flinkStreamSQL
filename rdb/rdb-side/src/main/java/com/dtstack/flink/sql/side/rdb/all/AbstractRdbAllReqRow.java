@@ -22,24 +22,21 @@ import com.dtstack.flink.sql.side.BaseAllReqRow;
 import com.dtstack.flink.sql.side.BaseSideInfo;
 import com.dtstack.flink.sql.side.rdb.table.RdbSideTableInfo;
 import com.dtstack.flink.sql.side.rdb.util.SwitchUtil;
-import com.dtstack.flink.sql.util.RowDataComplete;
-import com.dtstack.flink.sql.util.RowDataConvert;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.calcite.sql.JoinType;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
-import java.time.LocalDateTime;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -99,7 +96,7 @@ public abstract class AbstractRdbAllReqRow extends BaseAllReqRow {
     }
 
     @Override
-    public void flatMap(Row value, Collector<BaseRow> out) throws Exception {
+    public void flatMap(Row value, Collector<Row> out) throws Exception {
         List<Integer> equalValIndex = sideInfo.getEqualValIndex();
         ArrayList<Object> inputParams = equalValIndex.stream()
                 .map(value::getField)
@@ -108,7 +105,7 @@ public abstract class AbstractRdbAllReqRow extends BaseAllReqRow {
 
         if (inputParams.size() != equalValIndex.size() && sideInfo.getJoinType() == JoinType.LEFT) {
             Row row = fillData(value, null);
-            RowDataComplete.collectRow(out, row);
+            out.collect(row);
             return;
         }
 
@@ -119,9 +116,9 @@ public abstract class AbstractRdbAllReqRow extends BaseAllReqRow {
         List<Map<String, Object>> cacheList = cacheRef.get().get(cacheKey);
         if (CollectionUtils.isEmpty(cacheList) && sideInfo.getJoinType() == JoinType.LEFT) {
             Row row = fillData(value, null);
-            RowDataComplete.collectRow(out, row);
+            out.collect(row);
         } else if (!CollectionUtils.isEmpty(cacheList)) {
-            cacheList.stream().forEach(one -> out.collect(RowDataConvert.convertToBaseRow(fillData(value, one))));
+            cacheList.stream().forEach(one -> out.collect(fillData(value, one)));
         }
     }
 

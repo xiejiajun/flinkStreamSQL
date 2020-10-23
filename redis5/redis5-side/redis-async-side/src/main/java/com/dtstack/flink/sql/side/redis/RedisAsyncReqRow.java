@@ -31,9 +31,7 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 
 import com.dtstack.flink.sql.enums.ECacheContentType;
-import com.dtstack.flink.sql.side.CacheMissVal;
-import com.dtstack.flink.sql.side.FieldInfo;
-import com.dtstack.flink.sql.side.JoinInfo;
+import com.dtstack.flink.sql.side.*;
 import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.redis.enums.RedisType;
 import com.dtstack.flink.sql.side.redis.table.RedisSideReqRow;
@@ -47,7 +45,12 @@ import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.functions.async.ResultFuture;
+import org.apache.flink.types.Row;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -127,7 +130,7 @@ public class RedisAsyncReqRow extends BaseAsyncReqRow {
     }
 
     @Override
-    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture) throws Exception {
+    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture) throws Exception {
         String key = buildCacheKey(inputParams);
         if(StringUtils.isBlank(key)){
             return;
@@ -140,7 +143,7 @@ public class RedisAsyncReqRow extends BaseAsyncReqRow {
                     try {
                         Row row = fillData(input, values);
                         dealCacheData(key,CacheObj.buildCacheObj(ECacheContentType.SingleLine, row));
-                        RowDataComplete.completeRow(resultFuture, row);
+                        resultFuture.complete(Collections.singleton(row));
                     } catch (Exception e) {
                         dealFillDataError(input, resultFuture, e);
                     }
