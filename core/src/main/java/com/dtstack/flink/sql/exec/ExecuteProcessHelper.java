@@ -146,6 +146,12 @@ public class ExecuteProcessHelper {
     }
 
 
+    /**
+     * TODO 创建StreamExecutionEnvironment、StreamTableEnvironment并根据SQL翻译出具体的DataStream 执行计划
+     * @param paramsInfo
+     * @return
+     * @throws Exception
+     */
     public static StreamExecutionEnvironment getStreamExecution(ParamsInfo paramsInfo) throws Exception {
         StreamExecutionEnvironment env = ExecuteProcessHelper.getStreamExeEnv(paramsInfo.getConfProp(), paramsInfo.getDeployMode());
         StreamTableEnvironment tableEnv = getStreamTableEnv(env, paramsInfo.getConfProp());
@@ -159,13 +165,17 @@ public class ExecuteProcessHelper {
         Map<String, Table> registerTableCache = Maps.newHashMap();
 
         //register udf
+        // TODO 注册UDF到tableEnv
         ExecuteProcessHelper.registerUserDefinedFunction(sqlTree, paramsInfo.getJarUrlList(), tableEnv);
         //register table schema
+        // TODO 注册表的schema到tableEnv
         Set<URL> classPathSets = ExecuteProcessHelper.registerTable(sqlTree, env, tableEnv, paramsInfo.getLocalSqlPluginPath(),
                 paramsInfo.getRemoteSqlPluginPath(), paramsInfo.getPluginLoadMode(), sideTableMap, registerTableCache);
         // cache classPathSets
+        // TODO 缓存classpath
         ExecuteProcessHelper.registerPluginUrlToCachedFile(env, classPathSets);
 
+        // TODO SQL 翻译（将SQL翻译成具体的Java API调用:也就是我们平时使用DataStream API开发时写的那种逻辑)
         ExecuteProcessHelper.sqlTranslation(paramsInfo.getLocalSqlPluginPath(), paramsInfo.getPluginLoadMode(),tableEnv, sqlTree, sideTableMap, registerTableCache);
 
         if (env instanceof MyLocalStreamEnvironment) {

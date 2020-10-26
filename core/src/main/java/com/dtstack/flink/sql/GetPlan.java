@@ -32,6 +32,11 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
  */
 public class GetPlan {
 
+    /**
+     * TODO 这个方法还没真正使用，还是在使用在Main.main里面直接调用ExecuteProcessHelper.getStreamExecution
+     * @param args
+     * @return
+     */
     public static String getExecutionPlan(String[] args) {
         try {
             long start = System.currentTimeMillis();

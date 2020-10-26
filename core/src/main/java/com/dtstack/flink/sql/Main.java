@@ -38,8 +38,9 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         ParamsInfo paramsInfo = ExecuteProcessHelper.parseParams(args);
-        // TODO SQL解析入口 (Yarn 、Standalone模式将这个类作为core jar提交，local模式直接允许这个类)
+        // TODO SQL解析入口 (Yarn 、Standalone模式将这个类作为core jar提交，local模式直接运行这个类)
         StreamExecutionEnvironment env = ExecuteProcessHelper.getStreamExecution(paramsInfo);
+        // TODO 启动应用程序
         env.execute(paramsInfo.getName());
         LOG.info("program {} execution success", paramsInfo.getName());
     }
