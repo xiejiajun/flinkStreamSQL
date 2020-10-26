@@ -300,6 +300,7 @@ public class ExecuteProcessHelper {
 
                 RowTypeInfo typeInfo = new RowTypeInfo(adaptTable.getSchema().getFieldTypes(), adaptTable.getSchema().getFieldNames());
                 DataStream adaptStream = tableEnv.toAppendStream(adaptTable, typeInfo);
+                adaptStream.getTransformation().setOutputType(typeInfo);
 
                 String fields = String.join(",", typeInfo.getFieldNames());
 

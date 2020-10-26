@@ -18,9 +18,9 @@
 
 package com.dtstack.flink.sql.side.impala;
 
+import com.dtstack.flink.sql.side.AbstractSideTableInfo;
 import com.dtstack.flink.sql.side.FieldInfo;
 import com.dtstack.flink.sql.side.JoinInfo;
-import com.dtstack.flink.sql.side.AbstractSideTableInfo;
 import com.dtstack.flink.sql.side.impala.table.ImpalaSideTableInfo;
 import com.dtstack.flink.sql.side.rdb.async.RdbAsyncReqRow;
 import com.dtstack.flink.sql.util.KrbUtils;
@@ -32,7 +32,6 @@ import io.vertx.ext.sql.SQLClient;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -42,7 +41,6 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -151,7 +149,7 @@ public class ImpalaAsyncReqRow extends RdbAsyncReqRow {
     @Override
     protected void asyncQueryData(Map<String, Object> inputParams,
                           Row input,
-                          ResultFuture<BaseRow> resultFuture,
+                          ResultFuture<Row> resultFuture,
                           SQLClient rdbSqlClient,
                           AtomicLong failCounter,
                           AtomicBoolean finishFlag,

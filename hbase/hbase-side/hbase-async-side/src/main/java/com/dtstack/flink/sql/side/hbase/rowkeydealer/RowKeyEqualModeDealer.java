@@ -26,12 +26,10 @@ import com.dtstack.flink.sql.side.FieldInfo;
 import com.dtstack.flink.sql.side.cache.AbstractSideCache;
 import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.hbase.utils.HbaseUtils;
-import com.dtstack.flink.sql.util.RowDataComplete;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.calcite.sql.JoinType;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 import org.hbase.async.GetRequest;
 import org.hbase.async.HBaseClient;
@@ -62,7 +60,7 @@ public class RowKeyEqualModeDealer extends AbstractRowKeyModeDealer {
 
 
     @Override
-    public void asyncGetData(String tableName, String rowKeyStr, Row input, ResultFuture<BaseRow> resultFuture,
+    public void asyncGetData(String tableName, String rowKeyStr, Row input, ResultFuture<Row> resultFuture,
                              AbstractSideCache sideCache){
         //TODO 是否有查询多个col family 和多个col的方法
         GetRequest getRequest = new GetRequest(tableName, rowKeyStr);
@@ -97,7 +95,7 @@ public class RowKeyEqualModeDealer extends AbstractRowKeyModeDealer {
                         if(openCache){
                             sideCache.putCache(rowKeyStr, CacheObj.buildCacheObj(ECacheContentType.SingleLine, sideVal));
                         }
-                        RowDataComplete.completeRow(resultFuture, row);
+                        resultFuture.complete(Collections.singleton(row));
                     } catch (Exception e) {
                         resultFuture.completeExceptionally(e);
                     }

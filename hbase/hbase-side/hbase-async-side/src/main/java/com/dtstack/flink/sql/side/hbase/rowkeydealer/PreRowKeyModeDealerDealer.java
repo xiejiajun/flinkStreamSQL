@@ -26,12 +26,10 @@ import com.dtstack.flink.sql.side.FieldInfo;
 import com.dtstack.flink.sql.side.cache.AbstractSideCache;
 import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.hbase.utils.HbaseUtils;
-import com.dtstack.flink.sql.util.RowDataComplete;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.calcite.sql.JoinType;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 import org.hbase.async.*;
 import org.slf4j.Logger;
@@ -60,7 +58,7 @@ public class PreRowKeyModeDealerDealer extends AbstractRowKeyModeDealer {
     }
 
     @Override
-    public void asyncGetData(String tableName, String rowKeyStr, Row input, ResultFuture<BaseRow> resultFuture,
+    public void asyncGetData(String tableName, String rowKeyStr, Row input, ResultFuture<Row> resultFuture,
                              AbstractSideCache sideCache) {
         Scanner prefixScanner = hBaseClient.newScanner(tableName);
         ScanFilter scanFilter = new RowFilter(CompareFilter.CompareOp.EQUAL, new BinaryPrefixComparator(Bytes.UTF8(rowKeyStr)));
@@ -75,7 +73,7 @@ public class PreRowKeyModeDealerDealer extends AbstractRowKeyModeDealer {
 
 
     private String dealOneRow(ArrayList<ArrayList<KeyValue>> args, String rowKeyStr, Row input,
-                              ResultFuture<BaseRow> resultFuture, AbstractSideCache sideCache) {
+                              ResultFuture<Row> resultFuture, AbstractSideCache sideCache) {
         if(args == null || args.size() == 0){
             dealMissKey(input, resultFuture);
             if (openCache) {
@@ -130,7 +128,7 @@ public class PreRowKeyModeDealerDealer extends AbstractRowKeyModeDealer {
         }
 
         if (rowList.size() > 0){
-            RowDataComplete.completeRow(resultFuture, rowList);
+            resultFuture.complete(rowList);
         }
 
         if(openCache){
@@ -140,7 +138,7 @@ public class PreRowKeyModeDealerDealer extends AbstractRowKeyModeDealer {
         return "";
     }
 
-    private String dealFail(Object arg2, Row input, ResultFuture<BaseRow> resultFuture){
+    private String dealFail(Object arg2, Row input, ResultFuture<Row> resultFuture){
         LOG.error("record:" + input);
         LOG.error("get side record exception:" + arg2);
         resultFuture.complete(Collections.EMPTY_LIST);

@@ -21,6 +21,9 @@ package com.dtstack.flink.sql.side.redis;
 import com.dtstack.flink.sql.side.AbstractSideTableInfo;
 import com.dtstack.flink.sql.side.BaseAsyncReqRow;
 import com.dtstack.flink.sql.util.RowDataComplete;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.cluster.api.async.RedisAdvancedClusterAsyncCommands;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
@@ -28,9 +31,7 @@ import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.types.Row;
 
 import com.dtstack.flink.sql.enums.ECacheContentType;
-import com.dtstack.flink.sql.side.CacheMissVal;
-import com.dtstack.flink.sql.side.FieldInfo;
-import com.dtstack.flink.sql.side.JoinInfo;
+import com.dtstack.flink.sql.side.*;
 import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.redis.enums.RedisType;
 import com.dtstack.flink.sql.side.redis.table.RedisSideReqRow;
@@ -44,7 +45,12 @@ import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.functions.async.ResultFuture;
+import org.apache.flink.types.Row;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -84,35 +90,33 @@ public class RedisAsyncReqRow extends BaseAsyncReqRow {
     private void buildRedisClient(RedisSideTableInfo tableInfo){
         String url = redisSideTableInfo.getUrl();
         String password = redisSideTableInfo.getPassword();
-        if (password != null){
-            password = password + "@";
-        } else {
-            password = "";
-        }
+
         String database = redisSideTableInfo.getDatabase();
         if (database == null){
             database = "0";
         }
         switch (RedisType.parse(tableInfo.getRedisType())){
             case STANDALONE:
-                StringBuilder redisUri = new StringBuilder();
-                redisUri.append("redis://").append(password).append(url).append("/").append(database);
-                redisClient = RedisClient.create(redisUri.toString());
+                RedisURI redisURI = RedisURI.create("redis://" + url);
+                redisURI.setPassword(password);
+                redisURI.setDatabase(Integer.valueOf(database));
+                redisClient = RedisClient.create(redisURI);
                 connection = redisClient.connect();
                 async = connection.async();
                 break;
             case SENTINEL:
-                StringBuilder sentinelUri = new StringBuilder();
-                sentinelUri.append("redis-sentinel://").append(password)
-                        .append(url).append("/").append(database).append("#").append(redisSideTableInfo.getMasterName());
-                redisClient = RedisClient.create(sentinelUri.toString());
+                RedisURI redisSentinelURI = RedisURI.create("redis-sentinel://" + url);
+                redisSentinelURI.setPassword(password);
+                redisSentinelURI.setDatabase(Integer.valueOf(database));
+                redisSentinelURI.setSentinelMasterId(redisSideTableInfo.getMasterName());
+                redisClient = RedisClient.create(redisSentinelURI);
                 connection = redisClient.connect();
                 async = connection.async();
                 break;
             case CLUSTER:
-                StringBuilder clusterUri = new StringBuilder();
-                clusterUri.append("redis://").append(password).append(url);
-                clusterClient = RedisClusterClient.create(clusterUri.toString());
+                RedisURI clusterURI = RedisURI.create("redis://" + url);
+                clusterURI.setPassword(password);
+                clusterClient = RedisClusterClient.create(clusterURI);
                 clusterConnection = clusterClient.connect();
                 async = clusterConnection.async();
             default:
@@ -126,7 +130,7 @@ public class RedisAsyncReqRow extends BaseAsyncReqRow {
     }
 
     @Override
-    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture) throws Exception {
+    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture) throws Exception {
         String key = buildCacheKey(inputParams);
         if(StringUtils.isBlank(key)){
             return;
@@ -139,7 +143,7 @@ public class RedisAsyncReqRow extends BaseAsyncReqRow {
                     try {
                         Row row = fillData(input, values);
                         dealCacheData(key,CacheObj.buildCacheObj(ECacheContentType.SingleLine, row));
-                        RowDataComplete.completeRow(resultFuture, row);
+                        resultFuture.complete(Collections.singleton(row));
                     } catch (Exception e) {
                         dealFillDataError(input, resultFuture, e);
                     }

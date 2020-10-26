@@ -18,24 +18,25 @@
 
 package com.dtstack.flink.sql.side.elasticsearch6;
 
-import com.dtstack.flink.sql.util.RowDataComplete;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
-import org.apache.flink.types.Row;
-
 import com.dtstack.flink.sql.enums.ECacheContentType;
-import com.dtstack.flink.sql.side.*;
+import com.dtstack.flink.sql.side.AbstractSideTableInfo;
+import com.dtstack.flink.sql.side.BaseAsyncReqRow;
+import com.dtstack.flink.sql.side.CacheMissVal;
+import com.dtstack.flink.sql.side.FieldInfo;
+import com.dtstack.flink.sql.side.JoinInfo;
+import com.dtstack.flink.sql.side.PredicateInfo;
 import com.dtstack.flink.sql.side.cache.CacheObj;
 import com.dtstack.flink.sql.side.elasticsearch6.table.Elasticsearch6SideTableInfo;
 import com.dtstack.flink.sql.side.elasticsearch6.util.Es6Util;
-import com.dtstack.flink.sql.side.elasticsearch6.util.SwitchUtil;
 import com.dtstack.flink.sql.util.ParseUtils;
 import com.google.common.collect.Lists;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.streaming.api.functions.async.ResultFuture;
+import org.apache.flink.table.typeutils.TimeIndicatorTypeInfo;
+import org.apache.flink.types.Row;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -82,7 +83,7 @@ public class Elasticsearch6AsyncReqRow extends BaseAsyncReqRow implements Serial
 
 
     @Override
-    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<BaseRow> resultFuture) throws Exception {
+    public void handleAsyncInvoke(Map<String, Object> inputParams, Row input, ResultFuture<Row> resultFuture) throws Exception {
         String key = buildCacheKey(inputParams);
         BoolQueryBuilder boolQueryBuilder = Es6Util.setPredicateclause(sideInfo);
         boolQueryBuilder = setInputParams(inputParams, boolQueryBuilder);
@@ -110,7 +111,7 @@ public class Elasticsearch6AsyncReqRow extends BaseAsyncReqRow implements Serial
                             if (searchHits.length < getFetchSize()) {
                                 break;
                             }
-                            if (tableInfo == null && tmpRhlClient == null) {
+                            if (tableInfo == null) {
                                 // create new connection to fetch data
                                 tableInfo = (Elasticsearch6SideTableInfo) sideInfo.getSideTableInfo();
                                 tmpRhlClient = Es6Util.getClient(tableInfo.getAddress(), tableInfo.isAuthMesh(), tableInfo.getUserName(), tableInfo.getPassword());
@@ -122,7 +123,7 @@ public class Elasticsearch6AsyncReqRow extends BaseAsyncReqRow implements Serial
                             searchHits = searchResponse.getHits().getHits();
                         }
                         dealCacheData(key, CacheObj.buildCacheObj(ECacheContentType.MultiLine, cacheContent));
-                        RowDataComplete.completeRow(resultFuture, rowList);
+                        resultFuture.complete(rowList);
                     } catch (Exception e) {
                         dealFillDataError(input, resultFuture, e);
                     } finally {
@@ -201,7 +202,7 @@ public class Elasticsearch6AsyncReqRow extends BaseAsyncReqRow implements Serial
             if (cacheInfo == null) {
                 row.setField(entry.getKey(), null);
             } else {
-                Object object = SwitchUtil.getTarget(cacheInfo.get(sideInfo.getSideFieldNameIndex().get(entry.getKey())), fields[entry.getValue()]);
+                Object object = Es6Util.getTarget(cacheInfo.get(sideInfo.getSideFieldNameIndex().get(entry.getKey())), fields[entry.getValue()]);
                 row.setField(entry.getKey(), object);
             }
         }
