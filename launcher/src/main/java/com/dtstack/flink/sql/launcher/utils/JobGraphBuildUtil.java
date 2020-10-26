@@ -67,6 +67,7 @@ public class JobGraphBuildUtil {
         String flinkConfDir = jobParamsInfo.getFlinkConfDir();
 
         String[] execArgs = jobParamsInfo.getExecArgs();
+        // TODO 用于根据提交模式选择知道的jar作为Flink应用
         File coreJarFile = new File(findLocalCoreJarPath(jobParamsInfo.getLocalPluginRoot(), jobParamsInfo.getPluginLoadMode()));
         SavepointRestoreSettings savepointRestoreSettings = dealSavepointRestoreSettings(jobParamsInfo.getConfProperties());
 

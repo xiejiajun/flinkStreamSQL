@@ -203,6 +203,14 @@ public class PluginUtil {
         return urlList.toArray(new URL[0]);
     }
 
+    /**
+     * 获取作为Flink 应用提交的jar名称
+     * @param path
+     * @param prefix
+     * @param pluginLoadMode
+     * @return
+     * @throws Exception
+     */
     public static String getCoreJarFileName(String path, String prefix, String pluginLoadMode) throws Exception {
         String coreJarFileName = null;
         File pluginDir = new File(path);
