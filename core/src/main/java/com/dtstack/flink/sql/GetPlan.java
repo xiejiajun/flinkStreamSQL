@@ -36,6 +36,7 @@ public class GetPlan {
         try {
             long start = System.currentTimeMillis();
             ParamsInfo paramsInfo = ExecuteProcessHelper.parseParams(args);
+            // TODO SQL解析入口
             StreamExecutionEnvironment env = ExecuteProcessHelper.getStreamExecution(paramsInfo);
             String executionPlan = env.getExecutionPlan();
             long end = System.currentTimeMillis();

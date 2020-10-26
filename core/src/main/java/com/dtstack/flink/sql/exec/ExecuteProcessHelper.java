@@ -152,6 +152,7 @@ public class ExecuteProcessHelper {
 
 
         SqlParser.setLocalSqlPluginRoot(paramsInfo.getLocalSqlPluginPath());
+        // TODO SQL解析
         SqlTree sqlTree = SqlParser.parseSql(paramsInfo.getSql(), paramsInfo.getPluginLoadMode());
 
         Map<String, AbstractSideTableInfo> sideTableMap = Maps.newHashMap();

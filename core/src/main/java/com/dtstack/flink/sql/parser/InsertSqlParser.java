@@ -64,6 +64,12 @@ public class InsertSqlParser implements IParser {
         return parser;
     }
 
+    /**
+     * SQL解析
+     * @param sql
+     * @param sqlTree
+     * @throws Exception
+     */
     @Override
     public void parseSql(String sql, SqlTree sqlTree) throws Exception {
 
@@ -76,6 +82,11 @@ public class InsertSqlParser implements IParser {
         sqlTree.addExecSql(sqlParseResult);
     }
 
+    /**
+     * 语法树解析
+     * @param sqlNode
+     * @param sqlParseResult
+     */
     private static void parseNode(SqlNode sqlNode, SqlParseResult sqlParseResult){
         SqlKind sqlKind = sqlNode.getKind();
         switch (sqlKind){

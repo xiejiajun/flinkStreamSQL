@@ -38,6 +38,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         ParamsInfo paramsInfo = ExecuteProcessHelper.parseParams(args);
+        // TODO SQL解析入口
         StreamExecutionEnvironment env = ExecuteProcessHelper.getStreamExecution(paramsInfo);
         env.execute(paramsInfo.getName());
         LOG.info("program {} execution success", paramsInfo.getName());
