@@ -123,6 +123,7 @@ public class HbaseAsyncReqRow extends BaseAsyncReqRow {
             LOG.info("Kerberos login with keytab: {} and principal: {}", keytab, principal);
             String name = "HBaseClient";
             config.overrideConfig("hbase.sasl.clientconfig", name);
+            // TODO 参考Flink源码的JaasModule实现
             appendJaasConf(name, keytab, principal);
             refreshConfig();
         }

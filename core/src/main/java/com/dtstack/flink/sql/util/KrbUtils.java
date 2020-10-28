@@ -48,6 +48,8 @@ public class KrbUtils {
         System.setProperty(KRB5_CONF_KEY, krb5confPath);
         // 不刷新会读/etc/krb5.conf
         try {
+            // TODO 刷新配置，让Kerberos读取上面System.setProperty(KRB5_CONF_KEY, krb5confPath)设置的krb5配置文件
+            //  否则会读取/etc/krb5.conf
             Config.refresh();
             KerberosName.resetDefaultRealm();
         } catch (KrbException e) {
@@ -58,7 +60,11 @@ public class KrbUtils {
         Configuration configuration = new Configuration();
         configuration.set(HADOOP_AUTH_KEY , KRB_STR);
         UserGroupInformation.setConfiguration(configuration);
+        // TODO 必须使用loginUserFromKeytabAndReturnUGI返回一个新的UGI，loginUserFromKeytab是直接在老的UGI上进行
+        //  静态属性修改，会污染其他服务使用的UGI
         return UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keytabPath);
+
+        // TODO 使用kadmin生成keytab文件时加上--norandkey参数防止在这之前为同一账号生成的keytab文件失效
     }
 
 }
