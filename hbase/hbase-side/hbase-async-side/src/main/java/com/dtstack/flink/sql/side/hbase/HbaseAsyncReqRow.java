@@ -122,8 +122,17 @@ public class HbaseAsyncReqRow extends BaseAsyncReqRow {
 
             LOG.info("Kerberos login with keytab: {} and principal: {}", keytab, principal);
             String name = "HBaseClient";
+            // http://opentsdb.github.io/asynchbase/docs/build/html/index.html
+            // TODO 这里告诉AsyncHBase客户端，他要获取Kerberos认证配置信息时要用的key为HBaseClient(因为通过自己创建UGI并调用
+            //  ugi.doAS方法去构建hBaseClient的方式会影响Flink本身的kerberos认证配置和LoginContext（因为ugi的appName
+            //  都为hadoop-keytab-kerberos，而保存配置的javax.security.auth.login.Configuration又是一个单例对象，很容易
+            //  就把同一个key的老配置冲刷掉，然后使用老配置认证的Flink应用在TGT过期后获取配置重新认证时就会出问题了，因为配置已经被
+            //  后面的认证冲刷掉了，不再是之前的配置信息了)
+            //  http://opentsdb.github.io/asynchbase/docs/build/html/configuration.html
+            //  最终在asynchbase的KerberosClientAuthProvider(HBaseClient)构造方法根据hbase.sasl.clientconfig指定的key
+            //  然后 Login.initUserIfNeeded 创建LoginContext并登陆
             config.overrideConfig("hbase.sasl.clientconfig", name);
-            // TODO 参考Flink源码的JaasModule实现
+            // TODO 参考Flink源码的JaasModule实现, 用于防止HBase的登陆配置信息影响Flink登陆信息
             appendJaasConf(name, keytab, principal);
             refreshConfig();
         }
@@ -168,6 +177,8 @@ public class HbaseAsyncReqRow extends BaseAsyncReqRow {
         DynamicConfiguration currentConfig = new DynamicConfiguration(priorConfig);
         // wire up the configured JAAS login contexts to use the krb5 entries
         AppConfigurationEntry krb5Entry = KerberosUtils.keytabEntry(keytab, principal);
+        // TODO 主要是这里按name去添加Kerberos配置(UGI里面是使用hadoop-keytab-kerberos作为name）
+        //   Kerberos认证时是从一堆ticket里面找到一个能通过的就放行？
         currentConfig.addAppConfigurationEntry(name, krb5Entry);
         javax.security.auth.login.Configuration.setConfiguration(currentConfig);
     }
