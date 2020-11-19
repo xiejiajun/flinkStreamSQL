@@ -65,6 +65,7 @@ public class YarnSessionClusterExecutor {
         if (StringUtils.equalsIgnoreCase(jobParamsInfo.getPluginLoadMode(), EPluginLoadMode.SHIPFILE.name())) {
             jobGraph.getUserArtifacts().clear();
         } else {
+            // TODO 设置JobManager  classpath (本地文件系统路径,需要每台NM上这些路径都存在)
             JobGraphBuildUtil.fillJobGraphClassPath(jobGraph);
         }
 

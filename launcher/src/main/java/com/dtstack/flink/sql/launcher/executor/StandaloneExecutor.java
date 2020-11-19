@@ -58,6 +58,7 @@ public class StandaloneExecutor {
             JobGraphBuildUtil.fillUserJarForJobGraph(jobParamsInfo.getUdfJar(), jobGraph);
         }
 
+        // TODO 设置JobManager  classpath
         JobGraphBuildUtil.fillJobGraphClassPath(jobGraph);
 
         ClusterDescriptor clusterDescriptor = StandaloneClientFactory.INSTANCE.createClusterDescriptor("", flinkConfiguration);
