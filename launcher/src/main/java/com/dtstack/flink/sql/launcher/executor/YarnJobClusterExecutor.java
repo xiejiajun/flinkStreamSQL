@@ -169,8 +169,10 @@ public class YarnJobClusterExecutor {
     private void dealUserJarByPluginLoadMode(String pluginLoadMode, JobGraph jobGraph, List<File> shipFiles) throws MalformedURLException {
         // classpath , all node need contain plugin jar
         if (StringUtils.equalsIgnoreCase(pluginLoadMode, EPluginLoadMode.CLASSPATH.name())) {
+            // TODO 设置local classpath
             JobGraphBuildUtil.fillJobGraphClassPath(jobGraph);
         } else if (StringUtils.equalsIgnoreCase(pluginLoadMode, EPluginLoadMode.SHIPFILE.name())) {
+            // TODO 设置需要上传的依赖
             List<File> pluginPaths = JobGraphBuildUtil.getPluginPathToShipFiles(jobGraph);
             shipFiles.addAll(pluginPaths);
         } else {
