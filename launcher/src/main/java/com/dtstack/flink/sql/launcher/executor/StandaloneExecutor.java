@@ -50,6 +50,7 @@ public class StandaloneExecutor {
         Preconditions.checkArgument(StringUtils.equalsIgnoreCase(jobParamsInfo.getPluginLoadMode(), EPluginLoadMode.CLASSPATH.name()),
                 "standalone only supports classpath mode");
 
+        // TODO 指定com.dtstack.flink.sql.Main为执行入口的地方(coreJarFile)
         JobGraph jobGraph = JobGraphBuildUtil.buildJobGraph(jobParamsInfo);
         Configuration flinkConfiguration = JobGraphBuildUtil.getFlinkConfiguration(jobParamsInfo.getFlinkConfDir(), jobParamsInfo.getConfProperties());
 

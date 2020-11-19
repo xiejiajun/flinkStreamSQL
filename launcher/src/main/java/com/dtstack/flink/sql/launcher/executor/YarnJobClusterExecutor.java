@@ -65,6 +65,7 @@ public class YarnJobClusterExecutor {
     }
 
     public void exec() throws Exception {
+        // TODO TODO 指定com.dtstack.flink.sql.Main为执行入口的地方(coreJarFile)
         JobGraph jobGraph = JobGraphBuildUtil.buildJobGraph(jobParamsInfo);
         if (!StringUtils.isBlank(jobParamsInfo.getUdfJar())) {
             JobGraphBuildUtil.fillUserJarForJobGraph(jobParamsInfo.getUdfJar(), jobGraph);
